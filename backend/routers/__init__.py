@@ -1,0 +1,10 @@
+from .auth import router as auth_router
+from .users import router as users_router
+from .gold_rates import router as gold_rates_router
+from .clients import router as clients_router
+from .vendors import router as vendors_router
+from .orders import router as orders_router
+from .products import router as products_router
+from .transactions import router as transactions_router
+from .payments import router as payments_router
+from .buybacks import router as buybacks_router
