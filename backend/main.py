@@ -12,9 +12,15 @@ from routers import (
     products_router,
     transactions_router,
     payments_router,
-    buybacks_router
+    buybacks_router,
+    staff_router
 )
 from routers.accounts import router as accounts_router
+import models  # ensures all models are registered with Base before create_all
+from database import engine, Base
+
+Base.metadata.create_all(bind=engine)
+
 app = FastAPI(title="Neelima Jwels API")
 os.makedirs("uploads/products", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
@@ -40,6 +46,7 @@ app.include_router(transactions_router)
 app.include_router(payments_router)
 app.include_router(buybacks_router)
 app.include_router(accounts_router)
+app.include_router(staff_router)
 @app.get("/")
 def root():
     return {"status": "Neelima Jwels API is running"}

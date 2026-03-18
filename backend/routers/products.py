@@ -8,7 +8,8 @@ from services.gold_service import get_rate_for_purity
 from services.barcode_service import generate_barcode
 from routers.users import get_current_user, require_manager_or_above
 from models.user import User
-from typing import List
+from typing import List, Optional
+from pydantic import BaseModel
 import os
 import uuid
 from fastapi import UploadFile, File
@@ -150,3 +151,24 @@ async def upload_product_image(
     db.commit()
 
     return { "image_path": filepath }
+
+
+class MarkSoldRequest(BaseModel):
+    client_id: Optional[str] = None
+
+
+@router.patch("/{product_id}/mark-sold", response_model=ProductOut)
+def mark_sold(
+    product_id: str,
+    body: MarkSoldRequest = MarkSoldRequest(),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    product.is_sold = True
+    db.commit()
+    db.refresh(product)
+    product.stones = db.query(ProductStone).filter(ProductStone.product_id == product.id).all()
+    return product

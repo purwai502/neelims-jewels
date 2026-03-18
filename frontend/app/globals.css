@@ -1,0 +1,240 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Didact+Gothic&family=Cormorant:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --gold: #C9A84C;
+  --gold-light: #E8CC7A;
+  --gold-dim: #8B6E2E;
+  --gold-subtle: rgba(201, 168, 76, 0.12);
+
+  --bg: #FDE8F0;
+  --bg-card: #FFF5F8;
+  --bg-sidebar: #1A0622;
+  --bg-sidebar-hover: #2C1240;
+  --surface: #F7D6E4;
+  --surface-deep: #EFC4D6;
+
+  --text-primary: #1A0622;
+  --text-secondary: #5C2D4E;
+  --text-muted: #A07090;
+  --text-sidebar: #E8D5F0;
+
+  --border: #E8C4D8;
+  --border-gold: rgba(201, 168, 76, 0.35);
+  --border-light: #F2D8E8;
+
+  --shadow: 0 4px 24px rgba(26, 6, 34, 0.08);
+  --shadow-gold: 0 4px 24px rgba(201, 168, 76, 0.15);
+}
+
+[data-theme="dark"] {
+  --bg: #0F0218;
+  --bg-card: #1A0A28;
+  --bg-sidebar: #0A0112;
+  --bg-sidebar-hover: #2C1240;
+  --surface: #2A1040;
+  --surface-deep: #1E0830;
+
+  --text-primary: #F0E4F8;
+  --text-secondary: #C9A8D4;
+  --text-muted: #7A5A8A;
+  --text-sidebar: #E8D5F0;
+
+  --border: #3D1A55;
+  --border-gold: rgba(201, 168, 76, 0.25);
+  --border-light: #2A1040;
+
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-gold: 0 4px 24px rgba(201, 168, 76, 0.1);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Didact Gothic', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  transition: background-color 0.4s ease, color 0.4s ease;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typography */
+.font-display {
+  font-family: 'Playfair Display', serif;
+}
+.font-elegant {
+  font-family: 'Cormorant', serif;
+}
+
+h1, h2, h3 {
+  font-family: 'Playfair Display', serif;
+  line-height: 1.15;
+}
+
+/* Ornate divider */
+.divider-ornate {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--gold-dim);
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin: 24px 0;
+}
+.divider-ornate::before,
+.divider-ornate::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border-gold), transparent);
+}
+
+/* Gold border card */
+.card-luxury {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 32px;
+  position: relative;
+  box-shadow: var(--shadow);
+}
+.card-luxury::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px solid var(--border-gold);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+/* Corner ornament */
+.card-ornate {
+  background: var(--bg-card);
+  border: 1px solid var(--border-gold);
+  border-radius: 2px;
+  padding: 28px;
+  position: relative;
+  box-shadow: var(--shadow);
+}
+.card-ornate::before,
+.card-ornate::after {
+  content: '✦';
+  position: absolute;
+  color: var(--gold);
+  font-size: 8px;
+  opacity: 0.6;
+}
+.card-ornate::before { top: 8px; left: 12px; }
+.card-ornate::after  { bottom: 8px; right: 12px; }
+
+/* Label style */
+.label-caps {
+  font-family: 'Didact Gothic', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+/* Button styles */
+.btn-gold {
+  background: linear-gradient(135deg, #C9A84C, #E8CC7A, #C9A84C);
+  background-size: 200% 100%;
+  color: #1A0622;
+  border: none;
+  border-radius: 2px;
+  padding: 12px 32px;
+  font-family: 'Didact Gothic', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-position 0.4s ease, box-shadow 0.3s ease;
+}
+.btn-gold:hover {
+  background-position: 100% 0;
+  box-shadow: var(--shadow-gold);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--gold);
+  border: 1px solid var(--border-gold);
+  border-radius: 2px;
+  padding: 11px 28px;
+  font-family: 'Didact Gothic', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.btn-outline:hover {
+  background: var(--gold-subtle);
+  border-color: var(--gold);
+}
+
+/* Input style */
+.input-luxury {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom: 1px solid var(--gold-dim);
+  border-radius: 0;
+  padding: 12px 16px;
+  font-family: 'Didact Gothic', sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.3s ease;
+  width: 100%;
+}
+.input-luxury:focus {
+  border-bottom-color: var(--gold);
+  background: var(--bg-card);
+}
+
+/* Table styles */
+.table-luxury {
+  width: 100%;
+  border-collapse: collapse;
+}
+.table-luxury th {
+  font-family: 'Didact Gothic', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-gold);
+  text-align: left;
+  font-weight: 400;
+}
+.table-luxury td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+.table-luxury tr:hover td {
+  background: var(--gold-subtle);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-gold); border-radius: 2px; }

@@ -1,0 +1,494 @@
+"use client";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+interface Order { id: string; status: string; notes: string | null; }
+interface Purity { id: string; name: string; multiplier: number; }
+interface GoldRates { "24K": number; "22K": number; "18K": number; "14K": number; }
+
+interface StoneRow {
+  id: number;
+  stone_name: string;
+  weight: string;
+  price_per_carat: string;
+  total_price: string;
+  notes: string;
+  manual_total: boolean;
+}
+
+const METAL_TYPES = ["Gold", "Silver", "Platinum", "Other"];
+const PURITY_KEYS = ["24K", "22K", "18K", "14K"];
+
+const fmt  = (n: number) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt0 = (n: number) => Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+
+let stoneCounter = 0;
+
+export default function NewProductPage() {
+  const router = useRouter();
+
+  // form state
+  const [name,          setName]          = useState("");
+  const [metalType,     setMetalType]     = useState("Gold");
+  const [purityKey,     setPurityKey]     = useState("22K");
+  const [grossWeight,   setGrossWeight]   = useState("");
+  const [goldWeight,    setGoldWeight]    = useState("");
+  const [goldRate,      setGoldRate]      = useState("");
+  const [makingCharges, setMakingCharges] = useState("");
+  const [finalPrice,    setFinalPrice]    = useState("");
+  const [description,   setDescription]  = useState("");
+  const [orderId,       setOrderId]       = useState("");
+  const [stones,        setStones]        = useState<StoneRow[]>([]);
+  const [imageFile,     setImageFile]     = useState<File | null>(null);
+  const [imagePreview,  setImagePreview]  = useState<string | null>(null);
+
+  // data
+  const [orders,     setOrders]     = useState<Order[]>([]);
+  const [purities,   setPurities]   = useState<Purity[]>([]);
+  const [goldRates,  setGoldRates]  = useState<GoldRates | null>(null);
+  const [saving,     setSaving]     = useState(false);
+  const [error,      setError]      = useState("");
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) { router.push("/login"); return; }
+    const h = { "Authorization": `Bearer ${token}` };
+    Promise.all([
+      fetch("http://localhost:8000/orders/",      { headers: h }).then(r => r.json()),
+      fetch("http://localhost:8000/purities/",    { headers: h }).then(r => r.json()),
+      fetch("http://localhost:8000/gold-rates/today", { headers: h }).then(r => r.json()),
+    ]).then(([ordData, purData, rateData]) => {
+      setOrders(Array.isArray(ordData) ? ordData.filter((o: Order) => o.status === "DRAFT") : []);
+      setPurities(Array.isArray(purData) ? purData : []);
+      if (rateData && rateData["22K"]) {
+        setGoldRate(String(rateData["22K"]));
+        setGoldRates(rateData);
+      }
+    });
+  }, [router]);
+
+  // when purity changes, update gold rate from today's rates
+  const handlePurityChange = (key: string) => {
+    setPurityKey(key);
+    if (goldRates && goldRates[key as keyof GoldRates]) {
+      setGoldRate(String(goldRates[key as keyof GoldRates]));
+    }
+  };
+
+  // derived values (for live preview only)
+  const goldValue = (parseFloat(goldWeight) || 0) * (parseFloat(goldRate) || 0);
+  const stonesTotal   = stones.reduce((s, st) => s + (parseFloat(st.total_price) || 0), 0);
+  const costing       = goldValue + stonesTotal;
+
+  // stone helpers
+  const addStone = () => {
+    stoneCounter++;
+    setStones(prev => [...prev, {
+      id: stoneCounter, stone_name: "", weight: "", price_per_carat: "", total_price: "", notes: "", manual_total: false,
+    }]);
+  };
+
+  const updateStone = (id: number, field: string, value: string) => {
+    setStones(prev => prev.map(s => {
+      if (s.id !== id) return s;
+      const updated = { ...s, [field]: value };
+      // auto-calc total unless manually overridden
+      if ((field === "weight" || field === "price_per_carat") && !updated.manual_total) {
+        const w = parseFloat(field === "weight" ? value : s.weight) || 0;
+        const r = parseFloat(field === "price_per_carat" ? value : s.price_per_carat) || 0;
+        updated.total_price = w && r ? String((w * r).toFixed(2)) : updated.total_price;
+      }
+      if (field === "total_price") updated.manual_total = true;
+      return updated;
+    }));
+  };
+
+  const removeStone = (id: number) => setStones(prev => prev.filter(s => s.id !== id));
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  // find purity id from key
+  const getPurityId = () => {
+    const match = purities.find(p =>
+      p.name?.includes(purityKey.replace("K", "")) || p.name === purityKey
+    );
+    return match?.id || null;
+  };
+
+  const handleSubmit = async () => {
+    if (!name.trim())    { setError("Product name is required"); return; }
+    if (!grossWeight)    { setError("Gross weight is required"); return; }
+    if (!goldWeight)     { setError("Gold weight is required"); return; }
+    if (!goldRate)       { setError("Gold rate is required"); return; }
+    if (!finalPrice)     { setError("Final price is required"); return; }
+
+    setSaving(true);
+    setError("");
+
+    try {
+      const token    = localStorage.getItem("token");
+      const purityId = getPurityId();
+
+      const body = {
+        name:               name.trim(),
+        description:        `[${metalType}]${description ? " " + description.trim() : ""}`,
+        weight:             parseFloat(grossWeight),
+        gold_weight:        parseFloat(goldWeight),
+        purity_id:          purityId,
+        making_charges:     parseFloat(makingCharges) || 0,
+        gold_rate_snapshot: parseFloat(goldRate),
+        total_price:        parseFloat(finalPrice),
+        order_id:           orderId || null,
+        stones:             stones.map(s => ({
+          stone_name:     s.stone_name,
+          weight:         parseFloat(s.weight) || null,
+          price_per_carat: parseFloat(s.price_per_carat) || null,
+          total_price:    parseFloat(s.total_price) || 0,
+          notes:          s.notes || null,
+        })).filter(s => s.stone_name.trim()),
+      };
+
+      const res = await fetch("http://localhost:8000/products/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Failed to create product");
+      }
+
+      const created = await res.json();
+
+      // upload image if provided
+      if (imageFile && created.id) {
+        const formData = new FormData();
+        formData.append("file", imageFile);
+        await fetch(`http://localhost:8000/products/${created.id}/image`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}` },
+          body: formData,
+        });
+      }
+
+      router.push(`/products/${created.id}`);
+    } catch (e: any) {
+      setError(e.message || "Could not create product");
+    }
+    setSaving(false);
+  };
+
+  const inputStyle = {
+    width: "100%", padding: "10px 14px",
+    background: "var(--surface)", border: "1px solid var(--border)",
+    color: "var(--text-primary)", fontFamily: "'Didact Gothic', sans-serif",
+    fontSize: "13px", outline: "none", boxSizing: "border-box" as const,
+  };
+
+  const FieldLabel = ({ children }: { children: React.ReactNode }) => (
+    <p style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "8px", fontFamily: "'Didact Gothic', sans-serif" }}>
+      {children}
+    </p>
+  );
+
+  return (
+    <div style={{ maxWidth: "900px" }}>
+
+      {/* Header */}
+      <div style={{ marginBottom: "36px" }}>
+        <Link href="/products" style={{ textDecoration: "none" }}>
+          <p style={{ fontSize: "11px", letterSpacing: "0.15em", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "12px", cursor: "pointer" }}>
+            ← Back to Products
+          </p>
+        </Link>
+        <p className="label-caps" style={{ marginBottom: "8px" }}>✦ &nbsp; New Product</p>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "38px", fontWeight: 400, color: "var(--text-primary)" }}>
+          Add Product
+        </h1>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: "24px", alignItems: "start" }}>
+
+        {/* Image upload */}
+        <div>
+          <label style={{ cursor: "pointer", display: "block" }}>
+            <div style={{
+              aspectRatio: "1", background: "var(--bg-card)",
+              border: "1px dashed var(--border-gold)",
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              overflow: "hidden", marginBottom: "8px",
+            }}>
+              {imagePreview ? (
+                <img src={imagePreview} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <>
+                  <p style={{ color: "var(--gold)", fontSize: "28px", marginBottom: "8px" }}>◇</p>
+                  <p style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.1em" }}>Click to upload image</p>
+                </>
+              )}
+            </div>
+            <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: "none" }} />
+          </label>
+          {imagePreview && (
+            <button onClick={() => { setImageFile(null); setImagePreview(null); }}
+              style={{ width: "100%", padding: "6px", background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", fontSize: "10px", cursor: "pointer", letterSpacing: "0.1em" }}>
+              Remove Image
+            </button>
+          )}
+        </div>
+
+        {/* Main form */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+          {/* Name */}
+          <div>
+            <FieldLabel>Product Name *</FieldLabel>
+            <input value={name} onChange={e => setName(e.target.value)}
+              placeholder="e.g. 1 Line Ruby Emerald Necklace"
+              style={inputStyle} />
+          </div>
+
+          {/* Metal type */}
+          <div>
+            <FieldLabel>Metal Type</FieldLabel>
+            <div style={{ display: "flex", gap: "8px" }}>
+              {METAL_TYPES.map(m => (
+                <button key={m} onClick={() => setMetalType(m)} style={{
+                  flex: 1, padding: "10px",
+                  border: `1px solid ${metalType === m ? "var(--gold)" : "var(--border)"}`,
+                  background: metalType === m ? "var(--gold-subtle)" : "transparent",
+                  color: metalType === m ? "var(--gold)" : "var(--text-muted)",
+                  fontFamily: "'Didact Gothic', sans-serif", fontSize: "11px",
+                  letterSpacing: "0.06em", cursor: "pointer",
+                }}>{m}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Purity */}
+          <div>
+            <FieldLabel>Purity</FieldLabel>
+            <div style={{ display: "flex", gap: "8px" }}>
+              {PURITY_KEYS.map(p => (
+                <button key={p} onClick={() => handlePurityChange(p)} style={{
+                  flex: 1, padding: "10px",
+                  border: `1px solid ${purityKey === p ? "var(--gold)" : "var(--border)"}`,
+                  background: purityKey === p ? "var(--gold-subtle)" : "transparent",
+                  color: purityKey === p ? "var(--gold)" : "var(--text-muted)",
+                  fontFamily: "'Didact Gothic', sans-serif", fontSize: "13px",
+                  cursor: "pointer",
+                }}>{p}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Weight + Rate */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
+            <div>
+              <FieldLabel>Gross Weight (g) *</FieldLabel>
+              <input type="number" value={grossWeight} onChange={e => setGrossWeight(e.target.value)}
+                placeholder="e.g. 59.63" style={inputStyle} />
+            </div>
+            <div>
+              <FieldLabel>Gold Weight (g) *</FieldLabel>
+              <input type="number" value={goldWeight} onChange={e => setGoldWeight(e.target.value)}
+                placeholder="e.g. 52.00" style={inputStyle} />
+            </div>
+            <div>
+              <FieldLabel>Gold Rate ₹/g * (auto-filled, editable)</FieldLabel>
+              <input type="number" value={goldRate} onChange={e => setGoldRate(e.target.value)}
+                placeholder="e.g. 12160" style={inputStyle} />
+            </div>
+          </div>
+
+          {/* Live gold value preview */}
+          {goldValue > 0 && (
+            <div style={{
+              padding: "12px 16px", background: "rgba(201,168,76,0.06)",
+              border: "1px solid var(--border-gold)",
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+            }}>
+              <p style={{ fontSize: "10px", color: "var(--gold)", letterSpacing: "0.1em" }}>GOLD VALUE PREVIEW</p>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "18px", color: "var(--gold)" }}>
+                ₹{fmt(goldValue)}
+              </p>
+            </div>
+          )}
+
+          {/* Description */}
+          <div>
+            <FieldLabel>Description (optional)</FieldLabel>
+            <input value={description} onChange={e => setDescription(e.target.value)}
+              placeholder="e.g. Traditional bridal necklace with floral motif"
+              style={inputStyle} />
+          </div>
+
+          {/* Link to order */}
+          <div>
+            <FieldLabel>Link to Order (optional)</FieldLabel>
+            <select value={orderId} onChange={e => setOrderId(e.target.value)}
+              style={{ ...inputStyle, cursor: "pointer" }}>
+              <option value="">— Stock item (no order) —</option>
+              {orders.map(o => (
+                <option key={o.id} value={o.id}>
+                  {o.notes || o.id.slice(0, 8)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Stones Section */}
+      <div style={{ marginTop: "32px", border: "1px solid var(--border-gold)", overflow: "hidden" }}>
+        <div style={{
+          background: "var(--gold-subtle)", borderBottom: "1px solid var(--border-gold)",
+          padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center",
+        }}>
+          <p className="label-caps" style={{ fontSize: "9px" }}>Stones & Materials</p>
+          <button onClick={addStone} style={{
+            padding: "6px 16px", background: "transparent",
+            border: "1px solid var(--gold)", color: "var(--gold)",
+            fontFamily: "'Didact Gothic', sans-serif", fontSize: "10px",
+            letterSpacing: "0.08em", cursor: "pointer",
+          }}>+ Add Stone</button>
+        </div>
+
+        {/* Column headers */}
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1.5fr 32px", background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
+          {["Stone / Material", "Weight (ct)", "Rate / ct (₹)", "Total (₹)", "Notes", ""].map(h => (
+            <div key={h} style={{ padding: "8px 12px", fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--gold)", borderRight: "1px solid var(--border)" }}>{h}</div>
+          ))}
+        </div>
+
+        {stones.length === 0 ? (
+          <div style={{ padding: "20px", textAlign: "center" }}>
+            <p style={{ fontFamily: "'Cormorant', serif", fontSize: "14px", fontStyle: "italic", color: "var(--text-muted)" }}>
+              No stones added — click "+ Add Stone" to add diamonds, rubies, emeralds, etc.
+            </p>
+          </div>
+        ) : (
+          stones.map(stone => (
+            <div key={stone.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1.5fr 32px", borderBottom: "1px solid var(--border)" }}>
+              <div style={{ padding: "8px 10px", borderRight: "1px solid var(--border)" }}>
+                <input value={stone.stone_name} onChange={e => updateStone(stone.id, "stone_name", e.target.value)}
+                  placeholder="e.g. Rubies" style={{ ...inputStyle, padding: "6px 10px", fontSize: "12px" }} />
+              </div>
+              <div style={{ padding: "8px 10px", borderRight: "1px solid var(--border)" }}>
+                <input type="number" value={stone.weight} onChange={e => updateStone(stone.id, "weight", e.target.value)}
+                  placeholder="23.9" style={{ ...inputStyle, padding: "6px 10px", fontSize: "12px" }} />
+              </div>
+              <div style={{ padding: "8px 10px", borderRight: "1px solid var(--border)" }}>
+                <input type="number" value={stone.price_per_carat} onChange={e => updateStone(stone.id, "price_per_carat", e.target.value)}
+                  placeholder="1800" style={{ ...inputStyle, padding: "6px 10px", fontSize: "12px" }} />
+              </div>
+              <div style={{ padding: "8px 10px", borderRight: "1px solid var(--border)" }}>
+                <input type="number" value={stone.total_price} onChange={e => updateStone(stone.id, "total_price", e.target.value)}
+                  placeholder="auto"
+                  style={{ ...inputStyle, padding: "6px 10px", fontSize: "12px", color: stone.manual_total ? "var(--gold)" : "var(--text-primary)" }} />
+              </div>
+              <div style={{ padding: "8px 10px", borderRight: "1px solid var(--border)" }}>
+                <input value={stone.notes} onChange={e => updateStone(stone.id, "notes", e.target.value)}
+                  placeholder="optional notes" style={{ ...inputStyle, padding: "6px 10px", fontSize: "12px" }} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button onClick={() => removeStone(stone.id)} style={{
+                  background: "transparent", border: "none",
+                  color: "var(--text-muted)", cursor: "pointer", fontSize: "14px", padding: "4px",
+                }}>✕</button>
+              </div>
+            </div>
+          ))
+        )}
+
+        {/* Stones total */}
+        {stonesTotal > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1.5fr 32px", background: "var(--surface)", borderTop: "1px solid var(--border-gold)" }}>
+            <div style={{ padding: "10px 12px", gridColumn: "1 / 5", borderRight: "1px solid var(--border)" }}>
+              <p style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--text-muted)" }}>Stones Total</p>
+            </div>
+            <div style={{ padding: "10px 12px" }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", color: "var(--text-primary)" }}>₹{fmt(stonesTotal)}</p>
+            </div>
+            <div />
+          </div>
+        )}
+      </div>
+
+      {/* Pricing Section */}
+      <div style={{ marginTop: "24px", border: "1px solid var(--border-gold)", overflow: "hidden" }}>
+
+        <div style={{ background: "var(--gold-subtle)", borderBottom: "1px solid var(--border-gold)", padding: "14px 20px" }}>
+          <p className="label-caps" style={{ fontSize: "9px" }}>Pricing</p>
+        </div>
+
+        {/* Costing preview (read only) */}
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
+          <div style={{ padding: "12px 20px", borderRight: "1px solid var(--border)" }}>
+            <p style={{ fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)" }}>
+              Costing (Gold + Stones) — reference only
+            </p>
+          </div>
+          <div style={{ padding: "12px 20px" }}>
+            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "16px", color: "var(--text-secondary)" }}>₹{fmt(costing)}</p>
+          </div>
+        </div>
+
+        {/* Making charges — MANUAL */}
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ padding: "14px 20px", borderRight: "1px solid var(--border)" }}>
+            <p style={{ fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>
+              Labour / Making Charges *
+            </p>
+            <p style={{ fontSize: "10px", color: "var(--text-muted)", fontStyle: "italic" }}>Enter manually</p>
+          </div>
+          <div style={{ padding: "10px 16px" }}>
+            <input type="number" value={makingCharges} onChange={e => setMakingCharges(e.target.value)}
+              placeholder="e.g. 96788"
+              style={{ ...inputStyle, fontSize: "15px", fontFamily: "'Playfair Display', serif", color: "#5CB87A" }} />
+          </div>
+        </div>
+
+        {/* Final price — MANUAL */}
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", background: "var(--gold-subtle)", borderTop: "2px solid var(--border-gold)" }}>
+          <div style={{ padding: "16px 20px", borderRight: "1px solid var(--border-gold)" }}>
+            <p style={{ fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "4px" }}>
+              Final Price *
+            </p>
+            <p style={{ fontSize: "10px", color: "var(--text-muted)", fontStyle: "italic" }}>Enter the actual selling price manually</p>
+          </div>
+          <div style={{ padding: "12px 16px" }}>
+            <input type="number" value={finalPrice} onChange={e => setFinalPrice(e.target.value)}
+              placeholder="e.g. 936620"
+              style={{ ...inputStyle, fontSize: "20px", fontFamily: "'Playfair Display', serif", color: "var(--gold)", background: "transparent" }} />
+          </div>
+        </div>
+
+      </div>
+
+      {/* Error + Submit */}
+      {error && (
+        <p style={{ marginTop: "20px", color: "#E05C7A", fontSize: "12px" }}>{error}</p>
+      )}
+
+      <div style={{ marginTop: "24px", display: "flex", gap: "12px" }}>
+        <button onClick={handleSubmit} disabled={saving} className="btn-gold">
+          {saving ? "Saving…" : "Create Product"}
+        </button>
+        <Link href="/products">
+          <button className="btn-outline">Cancel</button>
+        </Link>
+      </div>
+
+    </div>
+  );
+}

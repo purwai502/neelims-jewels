@@ -17,13 +17,15 @@ class ProductOut(BaseModel):
     name:               str
     description:        Optional[str]
     weight:             float
+    gold_weight:        Optional[float] = None
     purity:             str
     making_charges:     float
     gold_rate_snapshot: float
     total_price:        Optional[float]
     order_id:           Optional[UUID]
     barcode:            Optional[str]
-    image_path: Optional[str] = None
+    image_path:         Optional[str] = None
+    is_sold:            bool = False
     stones:             Optional[List[ProductStoneOut]] = []
 
     class Config:

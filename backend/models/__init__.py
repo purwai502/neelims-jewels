@@ -15,3 +15,4 @@ from .staff_schedule import StaffSchedule
 from .staff_attendance import StaffAttendance
 from .salary_payment import SalaryPayment
 from .salary_advance import SalaryAdvance
+from .karigar_payment import KarigarPayment

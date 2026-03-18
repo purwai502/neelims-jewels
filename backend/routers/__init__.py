@@ -8,3 +8,4 @@ from .products import router as products_router
 from .transactions import router as transactions_router
 from .payments import router as payments_router
 from .buybacks import router as buybacks_router
+from .staff import router as staff_router
