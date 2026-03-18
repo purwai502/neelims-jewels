@@ -168,6 +168,8 @@ def mark_sold(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     product.is_sold = True
+    if body.client_id:
+        product.sold_to_client_id = body.client_id
     db.commit()
     db.refresh(product)
     product.stones = db.query(ProductStone).filter(ProductStone.product_id == product.id).all()

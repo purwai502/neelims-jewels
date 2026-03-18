@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import JsBarcode from "jsbarcode";
 
 interface Stone {
   id: string;
@@ -55,6 +56,21 @@ export default function SalePage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
+
+  const barcodeCallbackRef = (node: SVGSVGElement | null) => {
+    if (node && product?.barcode) {
+      JsBarcode(node, product.barcode, {
+        format: "CODE128",
+        width: 1.5,
+        height: 40,
+        displayValue: true,
+        fontSize: 10,
+        margin: 4,
+        background: "#ffffff",
+        lineColor: "#111111",
+      });
+    }
+  };
 
   const [product, setProduct] = useState<Product | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
@@ -222,6 +238,8 @@ export default function SalePage() {
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
+            right: 0 !important!;
+            margin: 0 auto !important!;
 
             width: 210mm !important;
             min-height: 297mm !important;
@@ -419,9 +437,9 @@ export default function SalePage() {
                 <div style={{ textAlign: "center", marginBottom: "24px" }}>
                   <p
                     style={{
-                      fontSize: "8px",
+                      fontSize: "9px",
                       letterSpacing: "0.55em",
-                      color: "#999",
+                      color: "#575555ff",
                       textTransform: "uppercase",
                       margin: "0 0 14px",
                       fontWeight: 600,
@@ -433,8 +451,8 @@ export default function SalePage() {
                   <h1
                     style={{
                       fontFamily: "'Playfair Display', serif",
-                      fontSize: "46px",
-                      fontWeight: 400,
+                      fontSize: "30px",
+                      fontWeight: 500,
                       color: "#111",
                       margin: 0,
                       letterSpacing: "0.02em",
@@ -449,7 +467,7 @@ export default function SalePage() {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      gap: "14px",
+                      gap: "12px",
                       margin: "12px 0",
                     }}
                   >
@@ -484,7 +502,7 @@ export default function SalePage() {
                     display: "grid",
                     gridTemplateColumns: "1fr 1fr",
                     gap: "0",
-                    marginBottom: "24px",
+                    marginBottom: "12px",
                   }}
                 >
                   <div style={{ paddingRight: "30px", borderRight: `1px solid #ddd` }}>
@@ -494,11 +512,11 @@ export default function SalePage() {
                         letterSpacing: "0.5em",
                         color: "#aaa",
                         textTransform: "uppercase",
-                        margin: "0 0 12px",
+                        margin: "0 0 8px",
                         fontWeight: 700,
                       }}
                     >
-                      Purchased By
+                      Presented To
                     </p>
 
                     {selectedClient ? (
@@ -506,20 +524,21 @@ export default function SalePage() {
                         <p
                           style={{
                             fontFamily: "'Playfair Display', serif",
-                            fontSize: "26px",
+                            fontSize: "20px",
                             color: "#111",
-                            margin: "0 0 10px",
+                            margin: "0 0 6px",
                             lineHeight: 1.1,
                             fontWeight: 500,
+                            fontStyle: "italic",
                           }}
                         >
                           {selectedClient.full_name}
                         </p>
-                        <div style={{ fontSize: "11px", color: "#444", lineHeight: 2 }}>
+                        <div style={{ fontSize: "11px", color: "#444", lineHeight: 1.6 }}>
                           {selectedClient.phone && <p style={{ margin: 0 }}>{selectedClient.phone}</p>}
                           {selectedClient.email && <p style={{ margin: 0 }}>{selectedClient.email}</p>}
                           {selectedClient.address && (
-                            <p style={{ margin: 0, color: "#666" }}>{selectedClient.address}</p>
+                            <p style={{ margin: 0 }}>{selectedClient.address}</p>
                           )}
                         </div>
                       </>
@@ -545,7 +564,7 @@ export default function SalePage() {
                         letterSpacing: "0.5em",
                         color: "#aaa",
                         textTransform: "uppercase",
-                        margin: "0 0 12px",
+                        margin: "0 0 8px",
                         fontWeight: 700,
                       }}
                     >
@@ -555,12 +574,12 @@ export default function SalePage() {
                     <p
                       style={{
                         fontFamily: "'Playfair Display', serif",
-                        fontSize: "26px",
+                        fontSize: "20px",
                         fontStyle: "italic",
                         color: "#111",
-                        margin: "0 0 10px",
+                        margin: "0 0 6px",
                         lineHeight: 1.1,
-                        fontWeight: 400,
+                        fontWeight: 500,
                       }}
                     >
                       {product.name}
@@ -571,8 +590,8 @@ export default function SalePage() {
                         style={{
                           fontSize: "11px",
                           color: "#444",
-                          margin: "0 0 10px",
-                          fontWeight: 400,
+                          margin: "0 0 6px",
+                          fontWeight: 500,
                           lineHeight: 1.5,
                         }}
                       >
@@ -609,45 +628,29 @@ export default function SalePage() {
                   display: "grid",
                   gridTemplateColumns: imageUrl ? "200px 1fr" : "1fr",
                   gap: "32px",
-                  alignItems: "start",
+                  alignItems: "stretch",
                   marginBottom: "24px",
                 }}
               >
                 {imageUrl && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
                     <div style={{ border: `1.5px solid ${GL}`, padding: "5px" }}>
                       <img
                         src={imageUrl}
                         alt={product.name}
-                        style={{
-                          width: "100%",
-                          aspectRatio: "1",
-                          objectFit: "cover",
-                          display: "block",
-                        }}
+                        style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }}
                       />
                     </div>
-                    <p
-                      style={{
-                        fontSize: "8px",
-                        textAlign: "center",
-                        color: "#777",
-                        letterSpacing: "0.18em",
-                        fontWeight: 600,
-                        margin: 0,
-                      }}
-                    >
-                      {product.barcode}
-                    </p>
+                    <svg ref={barcodeCallbackRef} style={{ width: "100%", marginTop: "8px", display: "block" }} />
                   </div>
                 )}
 
-                <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                <div style={{ display: "flex", flexDirection: "column" }}>
                   <p
                     style={{
-                      fontSize: "7px",
+                      fontSize: "9px",
                       letterSpacing: "0.5em",
-                      color: "#aaa",
+                      color: "#595757ff",
                       textTransform: "uppercase",
                       margin: "0 0 12px",
                       fontWeight: 700,
@@ -656,7 +659,7 @@ export default function SalePage() {
                     Composition &amp; Valuation
                   </p>
 
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
                     <thead>
                       <tr>
                         {["Item", "Weight", "Rate", "Value"].map((h, i) => (
@@ -665,12 +668,13 @@ export default function SalePage() {
                             style={{
                               padding: "10px 12px",
                               textAlign: i === 3 ? "right" : "left",
-                              fontSize: "7px",
+                              fontSize: "8px",
                               letterSpacing: "0.4em",
                               textTransform: "uppercase",
                               color: "#999",
                               fontWeight: 700,
                               borderBottom: `2px solid #222`,
+                              width: i === 0 ? "40%" : undefined,
                             }}
                           >
                             {h}
@@ -683,35 +687,33 @@ export default function SalePage() {
                       <tr>
                         <td
                           style={cellBase({
-                            fontSize: "10px",
-                            color: "#777",
+                            fontFamily: "'Playfair Display', serif",
+                            fontSize: "15px",
+                            color: "#111",
                             fontWeight: 500,
-                            letterSpacing: "0.05em",
-                            textTransform: "uppercase",
                           })}
                         >
                           Gross Weight
                         </td>
-                        <td style={cellBase({ color: "#333" })}>
+                        <td style={cellBase({ color: "#333", fontSize: "12px", fontWeight: 500 })}>
                           {Number(product.weight).toFixed(3)} g
                         </td>
-                        <td style={cellBase({ color: "#777" })}>{purityKey}</td>
+                        <td style={cellBase({ color: "#333", fontSize: "12px", fontWeight: 500 })}>{purityKey}</td>
                         <td style={cellBase()} />
                       </tr>
 
                       <tr>
                         <td
                           style={cellBase({
-                            fontSize: "10px",
-                            color: "#777",
+                            fontFamily: "'Playfair Display', serif",
+                            fontSize: "15px",
+                            color: "#111",
                             fontWeight: 500,
-                            letterSpacing: "0.05em",
-                            textTransform: "uppercase",
                           })}
                         >
                           Net Gold Wt.
                         </td>
-                        <td style={cellBase({ color: "#333" })}>
+                        <td style={cellBase({ color: "#333", fontSize: "12px", fontWeight: 500 })}>
                           {netGoldWeight.toFixed(3)} g
                         </td>
                         <td colSpan={2} style={cellBase()} />
@@ -778,100 +780,41 @@ export default function SalePage() {
                         </tr>
                       ))}
 
-                      <tr>
-                        <td
-                          colSpan={3}
-                          style={{
-                            padding: "12px 12px",
-                            borderTop: "2px solid #222",
-                            borderBottom: "1px solid #e8e8e8",
-                            fontSize: "9px",
-                            letterSpacing: "0.2em",
-                            color: "#666",
-                            textTransform: "uppercase",
-                            fontWeight: 600,
-                          }}
-                        >
-                          Material Costing
-                        </td>
-                        <td
-                          style={{
-                            padding: "12px 12px",
-                            textAlign: "right",
-                            borderTop: "2px solid #222",
-                            borderBottom: "1px solid #e8e8e8",
-                            fontFamily: "'Playfair Display', serif",
-                            fontSize: "15px",
-                            fontWeight: 600,
-                            color: "#111",
-                          }}
-                        >
-                          ₹{fmt(costing)}
-                        </td>
-                      </tr>
-
-                      <tr>
-                        <td
-                          colSpan={3}
-                          style={{
-                            padding: "12px 12px",
-                            borderBottom: "2px solid #222",
-                            fontSize: "9px",
-                            letterSpacing: "0.15em",
-                            color: "#666",
-                            textTransform: "uppercase",
-                            fontWeight: 600,
-                          }}
-                        >
-                          Labour / Making Charges
-                        </td>
-                        <td
-                          style={{
-                            padding: "12px 12px",
-                            textAlign: "right",
-                            borderBottom: "2px solid #222",
-                            fontFamily: "'Playfair Display', serif",
-                            fontSize: "15px",
-                            color: "#1a6b3c",
-                            fontWeight: 600,
-                          }}
-                        >
-                          ₹{fmt(makingCharges)}
-                        </td>
-                      </tr>
-
-                      <tr>
-                        <td
-                          colSpan={3}
-                          style={{
-                            padding: "18px 12px",
-                            fontSize: "10px",
-                            letterSpacing: "0.4em",
-                            color: "#111",
-                            textTransform: "uppercase",
-                            fontWeight: 700,
-                          }}
-                        >
-                          Total Value
-                        </td>
-                        <td
-                          style={{
-                            padding: "18px 12px",
-                            textAlign: "right",
-                            fontFamily: "'Playfair Display', serif",
-                            fontSize: "30px",
-                            color: "#111",
-                            fontWeight: 600,
-                            letterSpacing: "-0.01em",
-                          }}
-                        >
-                          ₹{fmt(finalPrice)}
-                        </td>
-                      </tr>
                     </tbody>
                   </table>
+
                 </div>
               </div>
+
+              {/* Full-width summary table */}
+              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "16px" }}>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: "10px 12px", borderTop: "2px solid #222", borderBottom: "1px solid #e8e8e8", fontFamily: "'Playfair Display', serif", fontSize: "15px", fontWeight: 500, color: "#111" }}>
+                      Material Costing
+                    </td>
+                    <td style={{ padding: "10px 12px", textAlign: "right", borderTop: "2px solid #222", borderBottom: "1px solid #e8e8e8", fontFamily: "'Playfair Display', serif", fontSize: "15px", fontWeight: 600, color: "#111", whiteSpace: "nowrap" }}>
+                      ₹{fmt(costing)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: "10px 12px", borderBottom: "2px solid #222", fontFamily: "'Playfair Display', serif", fontSize: "15px", fontWeight: 500, color: "#111" }}>
+                      Labour / Making Charges
+                    </td>
+                    <td style={{ padding: "10px 12px", textAlign: "right", borderBottom: "2px solid #222", fontFamily: "'Playfair Display', serif", fontSize: "15px", fontWeight: 600, color: "#111", whiteSpace: "nowrap" }}>
+                      ₹{fmt(makingCharges)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: "10px 12px", fontSize: "10px", letterSpacing: "0.4em", color: "#111", textTransform: "uppercase", fontWeight: 700 }}>
+                      Total Value
+                    </td>
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'Playfair Display', serif", fontSize: "28px", color: "#111", fontWeight: 600, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>
+                      ₹{fmt(finalPrice)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
 
               <div>
                 <div
@@ -885,9 +828,9 @@ export default function SalePage() {
                 >
                   <p
                     style={{
-                      fontSize: "7px",
+                      fontSize: "9px",
                       letterSpacing: "0.6em",
-                      color: "#aaa",
+                      color: "#535050ff",
                       textTransform: "uppercase",
                       margin: "0 0 10px",
                       fontWeight: 700,
@@ -928,7 +871,7 @@ export default function SalePage() {
                     style={{
                       fontSize: "8px",
                       letterSpacing: "0.55em",
-                      color: "#888",
+                      color: "#454242ff",
                       textTransform: "uppercase",
                       margin: 0,
                       fontWeight: 600,

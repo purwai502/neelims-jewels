@@ -26,6 +26,7 @@ class ProductOut(BaseModel):
     barcode:            Optional[str]
     image_path:         Optional[str] = None
     is_sold:            bool = False
+    sold_to_client_id:  Optional[UUID] = None
     stones:             Optional[List[ProductStoneOut]] = []
 
     class Config:
