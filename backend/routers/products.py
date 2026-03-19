@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from database import get_db
 from models.product import Product
 from models.product_stone import ProductStone
@@ -14,6 +15,8 @@ import os
 import uuid
 from fastapi import UploadFile, File
 
+GOLD_PURITIES = {"24K", "22K", "18K", "14K"}
+
 router = APIRouter(prefix="/products", tags=["Products"])
 
 @router.post("/", response_model=ProductOut)
@@ -22,10 +25,13 @@ def create_product(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager_or_above)
 ):
-    try:
-        gold_rate_snapshot = get_rate_for_purity(product_data.purity, db)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    if product_data.purity and product_data.purity.upper() in GOLD_PURITIES:
+        try:
+            gold_rate_snapshot = get_rate_for_purity(product_data.purity, db)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    else:
+        gold_rate_snapshot = 0
 
     barcode = generate_barcode(db)
 
@@ -41,6 +47,8 @@ def create_product(
         description        = product_data.description,
         weight             = product_data.weight,
         purity             = product_data.purity,
+        category           = product_data.category,
+        sub_category       = product_data.sub_category,
         making_charges     = product_data.making_charges,
         gold_rate_snapshot = gold_rate_snapshot,
         total_price        = total_price,
@@ -70,10 +78,22 @@ def create_product(
 
 @router.get("/", response_model=List[ProductOut])
 def get_all_products(
+    category:     Optional[str] = None,
+    sub_category: Optional[str] = None,
+    purity:       Optional[str] = None,
+    stone:        Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    products = db.query(Product).all()
+    query = db.query(Product)
+    if category:     query = query.filter(Product.category == category)
+    if sub_category: query = query.filter(Product.sub_category == sub_category)
+    if purity:       query = query.filter(Product.purity == purity)
+    if stone:
+        query = query.join(ProductStone, ProductStone.product_id == Product.id).filter(
+            func.lower(ProductStone.stone_name).contains(stone.lower())
+        )
+    products = query.all()
     for product in products:
         product.stones = db.query(ProductStone).filter(ProductStone.product_id == product.id).all()
     return products

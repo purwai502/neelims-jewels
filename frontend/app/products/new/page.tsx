@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface Order { id: string; status: string; notes: string | null; }
-interface Purity { id: string; name: string; multiplier: number; }
 interface GoldRates { "24K": number; "22K": number; "18K": number; "14K": number; }
 
 interface StoneRow {
@@ -17,11 +16,12 @@ interface StoneRow {
   manual_total: boolean;
 }
 
-const METAL_TYPES = ["Gold", "Silver", "Platinum", "Other"];
-const PURITY_KEYS = ["24K", "22K", "18K", "14K"];
+const METAL_TYPES   = ["Gold", "Silver", "Platinum", "Other"];
+const GOLD_PURITIES = ["24K", "22K", "18K", "14K"];
+const CATEGORIES    = ["Jewellery", "Art", "Other"];
+const SUB_CATEGORIES = ["Ring", "Earring", "Neck Piece", "Bracelet", "Other"];
 
 const fmt  = (n: number) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmt0 = (n: number) => Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
 let stoneCounter = 0;
 
@@ -31,7 +31,7 @@ export default function NewProductPage() {
   // form state
   const [name,          setName]          = useState("");
   const [metalType,     setMetalType]     = useState("Gold");
-  const [purityKey,     setPurityKey]     = useState("22K");
+  const [purity,        setPurity]        = useState("22K");      // unified purity string
   const [grossWeight,   setGrossWeight]   = useState("");
   const [goldWeight,    setGoldWeight]    = useState("");
   const [goldRate,      setGoldRate]      = useState("");
@@ -39,47 +39,59 @@ export default function NewProductPage() {
   const [finalPrice,    setFinalPrice]    = useState("");
   const [description,   setDescription]  = useState("");
   const [orderId,       setOrderId]       = useState("");
+  const [category,      setCategory]      = useState("");
+  const [subCategory,   setSubCategory]   = useState("");
   const [stones,        setStones]        = useState<StoneRow[]>([]);
   const [imageFile,     setImageFile]     = useState<File | null>(null);
   const [imagePreview,  setImagePreview]  = useState<string | null>(null);
 
   // data
-  const [orders,     setOrders]     = useState<Order[]>([]);
-  const [purities,   setPurities]   = useState<Purity[]>([]);
-  const [goldRates,  setGoldRates]  = useState<GoldRates | null>(null);
-  const [saving,     setSaving]     = useState(false);
-  const [error,      setError]      = useState("");
+  const [orders,    setOrders]    = useState<Order[]>([]);
+  const [goldRates, setGoldRates] = useState<GoldRates | null>(null);
+  const [saving,    setSaving]    = useState(false);
+  const [error,     setError]     = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
     const h = { "Authorization": `Bearer ${token}` };
     Promise.all([
-      fetch("http://localhost:8000/orders/",      { headers: h }).then(r => r.json()),
-      fetch("http://localhost:8000/purities/",    { headers: h }).then(r => r.json()),
-      fetch("http://localhost:8000/gold-rates/today", { headers: h }).then(r => r.json()),
-    ]).then(([ordData, purData, rateData]) => {
+      fetch("http://localhost:8000/orders/",           { headers: h }).then(r => r.json()),
+      fetch("http://localhost:8000/gold-rates/today",  { headers: h }).then(r => r.json()),
+    ]).then(([ordData, rateData]) => {
       setOrders(Array.isArray(ordData) ? ordData.filter((o: Order) => o.status === "DRAFT") : []);
-      setPurities(Array.isArray(purData) ? purData : []);
-      if (rateData && rateData["22K"]) {
+      if (rateData?.["22K"]) {
         setGoldRate(String(rateData["22K"]));
         setGoldRates(rateData);
       }
     });
   }, [router]);
 
-  // when purity changes, update gold rate from today's rates
-  const handlePurityChange = (key: string) => {
-    setPurityKey(key);
-    if (goldRates && goldRates[key as keyof GoldRates]) {
+  // when metal type changes
+  const handleMetalChange = (m: string) => {
+    setMetalType(m);
+    if (m === "Gold") {
+      setPurity("22K");
+      if (goldRates?.["22K"]) setGoldRate(String(goldRates["22K"]));
+    } else {
+      setPurity("");
+      setGoldWeight("");
+      setGoldRate("");
+    }
+  };
+
+  // when gold purity button changes
+  const handleGoldPurityChange = (key: string) => {
+    setPurity(key);
+    if (goldRates?.[key as keyof GoldRates]) {
       setGoldRate(String(goldRates[key as keyof GoldRates]));
     }
   };
 
-  // derived values (for live preview only)
-  const goldValue = (parseFloat(goldWeight) || 0) * (parseFloat(goldRate) || 0);
-  const stonesTotal   = stones.reduce((s, st) => s + (parseFloat(st.total_price) || 0), 0);
-  const costing       = goldValue + stonesTotal;
+  // derived values (live preview)
+  const goldValue   = metalType === "Gold" ? (parseFloat(goldWeight) || 0) * (parseFloat(goldRate) || 0) : 0;
+  const stonesTotal = stones.reduce((s, st) => s + (parseFloat(st.total_price) || 0), 0);
+  const costing     = goldValue + stonesTotal;
 
   // stone helpers
   const addStone = () => {
@@ -93,7 +105,6 @@ export default function NewProductPage() {
     setStones(prev => prev.map(s => {
       if (s.id !== id) return s;
       const updated = { ...s, [field]: value };
-      // auto-calc total unless manually overridden
       if ((field === "weight" || field === "price_per_carat") && !updated.manual_total) {
         const w = parseFloat(field === "weight" ? value : s.weight) || 0;
         const r = parseFloat(field === "price_per_carat" ? value : s.price_per_carat) || 0;
@@ -113,44 +124,36 @@ export default function NewProductPage() {
     setImagePreview(URL.createObjectURL(file));
   };
 
-  // find purity id from key
-  const getPurityId = () => {
-    const match = purities.find(p =>
-      p.name?.includes(purityKey.replace("K", "")) || p.name === purityKey
-    );
-    return match?.id || null;
-  };
-
   const handleSubmit = async () => {
-    if (!name.trim())    { setError("Product name is required"); return; }
-    if (!grossWeight)    { setError("Gross weight is required"); return; }
-    if (!goldWeight)     { setError("Gold weight is required"); return; }
-    if (!goldRate)       { setError("Gold rate is required"); return; }
-    if (!finalPrice)     { setError("Final price is required"); return; }
+    if (!name.trim())   { setError("Product name is required"); return; }
+    if (!grossWeight)   { setError("Gross weight is required"); return; }
+    if (metalType === "Gold" && !goldWeight) { setError("Gold weight is required"); return; }
+    if (metalType === "Gold" && !goldRate)   { setError("Gold rate is required"); return; }
+    if (!finalPrice)    { setError("Final price is required"); return; }
 
     setSaving(true);
     setError("");
 
     try {
-      const token    = localStorage.getItem("token");
-      const purityId = getPurityId();
+      const token = localStorage.getItem("token");
 
       const body = {
         name:               name.trim(),
         description:        `[${metalType}]${description ? " " + description.trim() : ""}`,
         weight:             parseFloat(grossWeight),
-        gold_weight:        parseFloat(goldWeight),
-        purity_id:          purityId,
+        gold_weight:        metalType === "Gold" ? (parseFloat(goldWeight) || null) : null,
+        purity:             purity || null,
+        category:           category || null,
+        sub_category:       subCategory || null,
         making_charges:     parseFloat(makingCharges) || 0,
-        gold_rate_snapshot: parseFloat(goldRate),
         total_price:        parseFloat(finalPrice),
         order_id:           orderId || null,
-        stones:             stones.map(s => ({
-          stone_name:     s.stone_name,
-          weight:         parseFloat(s.weight) || null,
+        stones: stones.map(s => ({
+          stone_name:      s.stone_name,
+          weight:          parseFloat(s.weight) || null,
           price_per_carat: parseFloat(s.price_per_carat) || null,
-          total_price:    parseFloat(s.total_price) || 0,
-          notes:          s.notes || null,
+          total_price:     parseFloat(s.total_price) || 0,
+          notes:           s.notes || null,
         })).filter(s => s.stone_name.trim()),
       };
 
@@ -167,7 +170,6 @@ export default function NewProductPage() {
 
       const created = await res.json();
 
-      // upload image if provided
       if (imageFile && created.id) {
         const formData = new FormData();
         formData.append("file", imageFile);
@@ -179,8 +181,8 @@ export default function NewProductPage() {
       }
 
       router.push(`/products/${created.id}`);
-    } catch (e: any) {
-      setError(e.message || "Could not create product");
+    } catch (e: unknown) {
+      setError((e as Error).message || "Could not create product");
     }
     setSaving(false);
   };
@@ -191,6 +193,15 @@ export default function NewProductPage() {
     color: "var(--text-primary)", fontFamily: "'Didact Gothic', sans-serif",
     fontSize: "13px", outline: "none", boxSizing: "border-box" as const,
   };
+
+  const pillStyle = (active: boolean) => ({
+    flex: 1, padding: "10px",
+    border: `1px solid ${active ? "var(--gold)" : "var(--border)"}`,
+    background: active ? "var(--gold-subtle)" : "transparent",
+    color: active ? "var(--gold)" : "var(--text-muted)",
+    fontFamily: "'Didact Gothic', sans-serif", fontSize: "11px",
+    letterSpacing: "0.06em", cursor: "pointer",
+  });
 
   const FieldLabel = ({ children }: { children: React.ReactNode }) => (
     <p style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "8px", fontFamily: "'Didact Gothic', sans-serif" }}>
@@ -261,56 +272,81 @@ export default function NewProductPage() {
             <FieldLabel>Metal Type</FieldLabel>
             <div style={{ display: "flex", gap: "8px" }}>
               {METAL_TYPES.map(m => (
-                <button key={m} onClick={() => setMetalType(m)} style={{
-                  flex: 1, padding: "10px",
-                  border: `1px solid ${metalType === m ? "var(--gold)" : "var(--border)"}`,
-                  background: metalType === m ? "var(--gold-subtle)" : "transparent",
-                  color: metalType === m ? "var(--gold)" : "var(--text-muted)",
-                  fontFamily: "'Didact Gothic', sans-serif", fontSize: "11px",
-                  letterSpacing: "0.06em", cursor: "pointer",
-                }}>{m}</button>
+                <button key={m} onClick={() => handleMetalChange(m)} style={pillStyle(metalType === m)}>{m}</button>
               ))}
             </div>
           </div>
 
-          {/* Purity */}
+          {/* Category */}
           <div>
-            <FieldLabel>Purity</FieldLabel>
+            <FieldLabel>Category</FieldLabel>
             <div style={{ display: "flex", gap: "8px" }}>
-              {PURITY_KEYS.map(p => (
-                <button key={p} onClick={() => handlePurityChange(p)} style={{
-                  flex: 1, padding: "10px",
-                  border: `1px solid ${purityKey === p ? "var(--gold)" : "var(--border)"}`,
-                  background: purityKey === p ? "var(--gold-subtle)" : "transparent",
-                  color: purityKey === p ? "var(--gold)" : "var(--text-muted)",
-                  fontFamily: "'Didact Gothic', sans-serif", fontSize: "13px",
-                  cursor: "pointer",
-                }}>{p}</button>
+              {CATEGORIES.map(c => (
+                <button key={c} onClick={() => { setCategory(c === category ? "" : c); if (c !== "Jewellery") setSubCategory(""); }}
+                  style={pillStyle(category === c)}>{c}</button>
               ))}
             </div>
           </div>
 
-          {/* Weight + Rate */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
+          {/* Sub-category — only for Jewellery */}
+          {category === "Jewellery" && (
+            <div>
+              <FieldLabel>Type</FieldLabel>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                {SUB_CATEGORIES.map(s => (
+                  <button key={s} onClick={() => setSubCategory(s === subCategory ? "" : s)}
+                    style={{ ...pillStyle(subCategory === s), flex: "unset", padding: "8px 14px" }}>{s}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Purity — Gold: karat buttons; Silver/Platinum: text input; Other: hidden */}
+          {metalType === "Gold" && (
+            <div>
+              <FieldLabel>Purity</FieldLabel>
+              <div style={{ display: "flex", gap: "8px" }}>
+                {GOLD_PURITIES.map(p => (
+                  <button key={p} onClick={() => handleGoldPurityChange(p)} style={{ ...pillStyle(purity === p), fontSize: "13px" }}>{p}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(metalType === "Silver" || metalType === "Platinum") && (
+            <div>
+              <FieldLabel>Purity (optional, e.g. {metalType === "Silver" ? "925" : "950"})</FieldLabel>
+              <input value={purity} onChange={e => setPurity(e.target.value)}
+                placeholder={metalType === "Silver" ? "e.g. 925" : "e.g. 950"}
+                style={inputStyle} />
+            </div>
+          )}
+
+          {/* Weight row */}
+          <div style={{ display: "grid", gridTemplateColumns: metalType === "Gold" ? "1fr 1fr 1fr" : "1fr", gap: "16px" }}>
             <div>
               <FieldLabel>Gross Weight (g) *</FieldLabel>
               <input type="number" value={grossWeight} onChange={e => setGrossWeight(e.target.value)}
                 placeholder="e.g. 59.63" style={inputStyle} />
             </div>
-            <div>
-              <FieldLabel>Gold Weight (g) *</FieldLabel>
-              <input type="number" value={goldWeight} onChange={e => setGoldWeight(e.target.value)}
-                placeholder="e.g. 52.00" style={inputStyle} />
-            </div>
-            <div>
-              <FieldLabel>Gold Rate ₹/g * (auto-filled, editable)</FieldLabel>
-              <input type="number" value={goldRate} onChange={e => setGoldRate(e.target.value)}
-                placeholder="e.g. 12160" style={inputStyle} />
-            </div>
+            {metalType === "Gold" && (
+              <>
+                <div>
+                  <FieldLabel>Gold Weight (g) *</FieldLabel>
+                  <input type="number" value={goldWeight} onChange={e => setGoldWeight(e.target.value)}
+                    placeholder="e.g. 52.00" style={inputStyle} />
+                </div>
+                <div>
+                  <FieldLabel>Gold Rate ₹/g * (auto-filled, editable)</FieldLabel>
+                  <input type="number" value={goldRate} onChange={e => setGoldRate(e.target.value)}
+                    placeholder="e.g. 12160" style={inputStyle} />
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Live gold value preview */}
-          {goldValue > 0 && (
+          {/* Live gold value preview (Gold only) */}
+          {metalType === "Gold" && goldValue > 0 && (
             <div style={{
               padding: "12px 16px", background: "rgba(201,168,76,0.06)",
               border: "1px solid var(--border-gold)",
@@ -363,7 +399,6 @@ export default function NewProductPage() {
           }}>+ Add Stone</button>
         </div>
 
-        {/* Column headers */}
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1.5fr 32px", background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
           {["Stone / Material", "Weight (ct)", "Rate / ct (₹)", "Total (₹)", "Notes", ""].map(h => (
             <div key={h} style={{ padding: "8px 12px", fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--gold)", borderRight: "1px solid var(--border)" }}>{h}</div>
@@ -410,7 +445,6 @@ export default function NewProductPage() {
           ))
         )}
 
-        {/* Stones total */}
         {stonesTotal > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1.5fr 32px", background: "var(--surface)", borderTop: "1px solid var(--border-gold)" }}>
             <div style={{ padding: "10px 12px", gridColumn: "1 / 5", borderRight: "1px solid var(--border)" }}>
@@ -426,16 +460,14 @@ export default function NewProductPage() {
 
       {/* Pricing Section */}
       <div style={{ marginTop: "24px", border: "1px solid var(--border-gold)", overflow: "hidden" }}>
-
         <div style={{ background: "var(--gold-subtle)", borderBottom: "1px solid var(--border-gold)", padding: "14px 20px" }}>
           <p className="label-caps" style={{ fontSize: "9px" }}>Pricing</p>
         </div>
 
-        {/* Costing preview (read only) */}
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
           <div style={{ padding: "12px 20px", borderRight: "1px solid var(--border)" }}>
             <p style={{ fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)" }}>
-              Costing (Gold + Stones) — reference only
+              Costing {metalType === "Gold" ? "(Gold + Stones)" : "(Stones)"} — reference only
             </p>
           </div>
           <div style={{ padding: "12px 20px" }}>
@@ -443,7 +475,6 @@ export default function NewProductPage() {
           </div>
         </div>
 
-        {/* Making charges — MANUAL */}
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", borderBottom: "1px solid var(--border)" }}>
           <div style={{ padding: "14px 20px", borderRight: "1px solid var(--border)" }}>
             <p style={{ fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>
@@ -458,7 +489,6 @@ export default function NewProductPage() {
           </div>
         </div>
 
-        {/* Final price — MANUAL */}
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", background: "var(--gold-subtle)", borderTop: "2px solid var(--border-gold)" }}>
           <div style={{ padding: "16px 20px", borderRight: "1px solid var(--border-gold)" }}>
             <p style={{ fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "4px" }}>
@@ -472,10 +502,8 @@ export default function NewProductPage() {
               style={{ ...inputStyle, fontSize: "20px", fontFamily: "'Playfair Display', serif", color: "var(--gold)", background: "transparent" }} />
           </div>
         </div>
-
       </div>
 
-      {/* Error + Submit */}
       {error && (
         <p style={{ marginTop: "20px", color: "#E05C7A", fontSize: "12px" }}>{error}</p>
       )}
