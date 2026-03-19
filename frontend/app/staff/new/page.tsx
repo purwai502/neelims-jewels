@@ -63,7 +63,7 @@ export default function NewStaffPage() {
         body.user_id = linkUserId.trim();
       }
 
-      const res = await fetch("http://localhost:8000/staff/", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(body),

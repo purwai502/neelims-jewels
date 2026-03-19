@@ -25,7 +25,7 @@ export default function VendorsPage() {
     if (!token) { router.push("/login"); return; }
     if (role !== "OWNER") { router.push("/dashboard"); return; }
 
-    fetch("http://localhost:8000/vendors/", {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendors/`, {
       headers: { "Authorization": `Bearer ${token}` }
     })
       .then(r => r.json())

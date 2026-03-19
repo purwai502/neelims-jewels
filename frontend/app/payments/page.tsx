@@ -97,22 +97,22 @@ export default function PaymentsPage() {
 
   const fetchData = (token: string) => {
     Promise.all([
-      fetch("http://localhost:8000/payments/", {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/payments/`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()),
-      fetch("http://localhost:8000/clients/", {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/clients/`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()),
-      fetch("http://localhost:8000/vendors/", {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendors/`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()),
-      fetch("http://localhost:8000/orders/", {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()),
-      fetch("http://localhost:8000/gold-rates/today", {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/gold-rates/today`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()),
-      fetch("http://localhost:8000/products/", {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()),
     ]).then(([paymentsData, clientsData, vendorsData, ordersData, ratesData, productsData]) => {
@@ -140,7 +140,7 @@ export default function PaymentsPage() {
     if (!token) return;
     if (payeeType === "client" && selectedClient) {
       setBalanceLoading(true);
-      fetch(`http://localhost:8000/clients/${selectedClient}/balance`, {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/clients/${selectedClient}/balance`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()).then(d => {
         setBalance(d.balance ?? null);
@@ -148,7 +148,7 @@ export default function PaymentsPage() {
       }).catch(() => setBalanceLoading(false));
     } else if (payeeType === "vendor" && selectedVendor) {
       setBalanceLoading(true);
-      fetch(`http://localhost:8000/vendors/${selectedVendor}/balance`, {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendors/${selectedVendor}/balance`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()).then(d => {
         setBalance(d.balance ?? null);
@@ -225,7 +225,7 @@ export default function PaymentsPage() {
           body.gold_description = line.gold_description || null;
           body.is_estimated     = line.is_estimated;
         }
-        const res = await fetch("http://localhost:8000/payments/", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payments/`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
           body: JSON.stringify(body),
@@ -280,7 +280,7 @@ export default function PaymentsPage() {
       const description = descMatch ? descMatch[1] : "Old gold";
       const notes = `Gold Exchange — ${description} · ${editWeight}g · ${editPurity} · Final weight${overrideRate ? ` · Rate ₹${fmt(overrideRate)}/g` : ""}`;
 
-      const res = await fetch(`http://localhost:8000/payments/${editPayment?.id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payments/${editPayment?.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

@@ -29,10 +29,10 @@ export default function VendorDetailPage() {
     if (role !== "OWNER") { router.push("/dashboard"); return; }
 
     Promise.all([
-      fetch(`http://localhost:8000/vendors/${id}`, {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendors/${id}`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()),
-      fetch(`http://localhost:8000/vendors/${id}/balance`, {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendors/${id}/balance`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()),
     ]).then(([vendorData, balanceData]) => {

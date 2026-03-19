@@ -11,7 +11,7 @@ export default function BarcodeLookupPage() {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
 
-    fetch(`http://localhost:8000/products/barcode/${code}`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/barcode/${code}`, {
       headers: { "Authorization": `Bearer ${token}` }
     })
       .then(r => r.json())

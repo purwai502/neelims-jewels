@@ -78,7 +78,7 @@ export default function OrderDetailPage() {
     if (!token) { router.push("/login"); return; }
     const h = { "Authorization": `Bearer ${token}` };
 
-    fetch(`http://localhost:8000/orders/${id}`, { headers: h })
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/${id}`, { headers: h })
       .then(r => r.json())
       .then(async (orderData) => {
         setOrder(orderData);
@@ -86,12 +86,12 @@ export default function OrderDetailPage() {
 
         // fetch client if exists
         if (orderData.client_id) {
-          fetch(`http://localhost:8000/clients/${orderData.client_id}`, { headers: h })
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/clients/${orderData.client_id}`, { headers: h })
             .then(r => r.json()).then(setClient).catch(() => {});
         }
 
         // fetch products linked to this order
-        fetch(`http://localhost:8000/products/?order_id=${id}`, { headers: h })
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/?order_id=${id}`, { headers: h })
           .then(r => r.json())
           .then(p => setProducts(Array.isArray(p) ? p : []))
           .catch(() => {});
@@ -107,7 +107,7 @@ export default function OrderDetailPage() {
     setSaving(true); setError("");
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:8000/orders/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ final_price: parseFloat(finalPrice) }),
@@ -122,7 +122,7 @@ export default function OrderDetailPage() {
     setSaving(true); setError("");
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:8000/orders/${id}/lock`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/${id}/lock`, {
         method: "POST", headers: { "Authorization": `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed");
@@ -135,7 +135,7 @@ export default function OrderDetailPage() {
     setSaving(true); setError("");
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:8000/orders/${id}/complete`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/${id}/complete`, {
         method: "PATCH", headers: { "Authorization": `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed");
@@ -149,7 +149,7 @@ export default function OrderDetailPage() {
     setSaving(true); setError("");
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:8000/orders/${id}/cancel`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/${id}/cancel`, {
         method: "PATCH", headers: { "Authorization": `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed");

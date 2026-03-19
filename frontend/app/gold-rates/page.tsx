@@ -34,11 +34,11 @@ export default function GoldRatesPage() {
 
   const fetchData = (token: string) => {
     Promise.all([
-      fetch("http://localhost:8000/gold-rates/history", {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/gold-rates/history`, {
         method: "GET",
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()),
-      fetch("http://localhost:8000/gold-rates/today", {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/gold-rates/today`, {
         method: "GET",
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()),
@@ -64,7 +64,7 @@ export default function GoldRatesPage() {
     setSuccess("");
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:8000/gold-rates/", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/gold-rates/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

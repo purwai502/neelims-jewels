@@ -94,32 +94,32 @@ export default function StaffDetailPage() {
   const h     = { "Authorization": `Bearer ${token}` };
 
   const fetchStaff = useCallback(async () => {
-    const res = await fetch(`http://localhost:8000/staff/${id}`, { headers: h });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/${id}`, { headers: h });
     if (res.ok) { setStaff(await res.json()); setLoading(false); }
     else setLoading(false);
   }, [id]);
 
   const fetchAttendance = useCallback(async (month: number, year: number) => {
-    const res = await fetch(`http://localhost:8000/staff/${id}/attendance?month=${month}&year=${year}`, { headers: h });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/${id}/attendance?month=${month}&year=${year}`, { headers: h });
     if (res.ok) setAttendance(await res.json());
   }, [id]);
 
   const fetchSalary = useCallback(async (month: number, year: number) => {
     const [calcRes, histRes] = await Promise.all([
-      fetch(`http://localhost:8000/staff/${id}/salary/calculate?month=${month}&year=${year}`, { headers: h }),
-      fetch(`http://localhost:8000/staff/${id}/salary`, { headers: h }),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/${id}/salary/calculate?month=${month}&year=${year}`, { headers: h }),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/${id}/salary`, { headers: h }),
     ]);
     if (calcRes.ok) setSalaryCalc(await calcRes.json());
     if (histRes.ok) setSalaryHistory(await histRes.json());
   }, [id]);
 
   const fetchAdvances = useCallback(async () => {
-    const res = await fetch(`http://localhost:8000/staff/${id}/advances`, { headers: h });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/${id}/advances`, { headers: h });
     if (res.ok) setAdvances(await res.json());
   }, [id]);
 
   const fetchKarigar = useCallback(async () => {
-    const res = await fetch(`http://localhost:8000/staff/${id}/karigar-payments`, { headers: h });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/${id}/karigar-payments`, { headers: h });
     if (res.ok) setKarigarPayments(await res.json());
   }, [id]);
 
@@ -136,7 +136,7 @@ export default function StaffDetailPage() {
   }, [tab, attMonth, attYear, salaryMonth, salaryYear]);
 
   const markAttendance = async (date: string, status: string) => {
-    await fetch(`http://localhost:8000/staff/${id}/attendance`, {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/${id}/attendance`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...h },
       body: JSON.stringify({ date, status }),
@@ -147,7 +147,7 @@ export default function StaffDetailPage() {
   const paySalary = async () => {
     if (!salaryCalc) return;
     setPayingSalary(true);
-    await fetch(`http://localhost:8000/staff/${id}/salary/pay`, {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/${id}/salary/pay`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...h },
       body: JSON.stringify({
@@ -170,7 +170,7 @@ export default function StaffDetailPage() {
   const addAdvance = async () => {
     if (!newAdvAmount) return;
     setAddingAdv(true);
-    await fetch(`http://localhost:8000/staff/${id}/advances`, {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/${id}/advances`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...h },
       body: JSON.stringify({ amount: parseFloat(newAdvAmount), date: newAdvDate, reason: newAdvReason || null }),
@@ -182,7 +182,7 @@ export default function StaffDetailPage() {
   };
 
   const toggleAdvance = async (advId: string, status: string) => {
-    await fetch(`http://localhost:8000/staff/${id}/advances/${advId}?status=${status}`, {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/${id}/advances/${advId}?status=${status}`, {
       method: "PATCH", headers: h,
     });
     fetchAdvances();
@@ -191,7 +191,7 @@ export default function StaffDetailPage() {
   const addKarigarPayment = async () => {
     if (!newKAmount) return;
     setAddingK(true);
-    await fetch(`http://localhost:8000/staff/${id}/karigar-payments`, {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/${id}/karigar-payments`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...h },
       body: JSON.stringify({ amount: parseFloat(newKAmount), description: newKDesc || null, payment_date: newKDate }),

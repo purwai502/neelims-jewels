@@ -57,7 +57,7 @@ export default function ReportsPage() {
     if (!token) { router.push("/login"); return; }
     if (role === "EMPLOYEE") { router.push("/dashboard"); return; }
     const h = { "Authorization": `Bearer ${token}` };
-    const B = "http://localhost:8000";
+    const B = process.env.NEXT_PUBLIC_API_URL!;
     Promise.all([
       fetch(`${B}/reports/summary`,              { headers: h }).then(r => r.json()),
       fetch(`${B}/reports/revenue-by-month`,     { headers: h }).then(r => r.json()),
@@ -86,7 +86,7 @@ export default function ReportsPage() {
 
   const fetchAllData = async () => {
     const token = localStorage.getItem("token");
-    const res = await fetch("http://localhost:8000/reports/export/all", {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/reports/export/all`, {
       headers: { "Authorization": `Bearer ${token}` },
     });
     if (!res.ok) throw new Error("Export failed");

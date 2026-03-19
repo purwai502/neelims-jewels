@@ -30,7 +30,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
-    fetch(`http://localhost:8000/staff/attendance/daily?date=${todayStr}`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/attendance/daily?date=${todayStr}`, {
       headers: { Authorization: `Bearer ${token}` },
     }).then(r => r.ok ? r.json() : []).then(setAttendance).catch(() => {});
   }, [todayStr]);
@@ -49,7 +49,7 @@ export default function DashboardPage() {
     try {
       const token = localStorage.getItem("token");
       const dateStr = new Date().toISOString().split("T")[0];
-      const res = await fetch("http://localhost:8000/gold-rates/", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/gold-rates/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -51,7 +51,7 @@ export default function NewVendorPage() {
           ? `[${form.vendor_type}]${form.notes ? " " + form.notes : ""}`
           : form.notes || null,
       };
-      const res = await fetch("http://localhost:8000/vendors/", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendors/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

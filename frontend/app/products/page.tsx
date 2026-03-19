@@ -48,7 +48,7 @@ export default function ProductsPage() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
-    fetch("http://localhost:8000/products/", {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/`, {
       headers: { "Authorization": `Bearer ${token}` }
     })
       .then(r => r.json())
@@ -238,7 +238,7 @@ export default function ProductsPage() {
                 {product.image_path ? (
                   <div style={{ height: "180px", overflow: "hidden" }}>
                     <img
-                      src={`http://localhost:8000/${product.image_path}`}
+                      src={`${process.env.NEXT_PUBLIC_API_URL}/${product.image_path}`}
                       alt={product.name}
                       style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                     />

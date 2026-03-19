@@ -40,10 +40,10 @@ export default function TransactionsPage() {
     if (role === "EMPLOYEE") { router.push("/dashboard"); return; }
 
     Promise.all([
-      fetch("http://localhost:8000/transactions/", {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/transactions/`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()),
-      fetch("http://localhost:8000/accounts/", {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()),
     ]).then(([txData, accData]) => {

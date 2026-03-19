@@ -31,7 +31,7 @@ export default function OrdersPage() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
-    fetch("http://localhost:8000/orders/", {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/`, {
       headers: { "Authorization": `Bearer ${token}` }
     })
       .then(r => r.json())

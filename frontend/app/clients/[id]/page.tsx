@@ -28,10 +28,10 @@ const canViewBalance = role === "OWNER" || role === "MANAGER";
     if (!token) { router.push("/login"); return; }
 
     Promise.all([
-      fetch(`http://localhost:8000/clients/${id}`, {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/clients/${id}`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()),
-      fetch(`http://localhost:8000/clients/${id}/balance`, {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/clients/${id}/balance`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()),
     ]).then(([clientData, balanceData]) => {

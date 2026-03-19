@@ -50,8 +50,8 @@ export default function NewOrderPage() {
     if (!token) { router.push("/login"); return; }
     const h = { "Authorization": `Bearer ${token}` };
     Promise.all([
-      fetch("http://localhost:8000/clients/",          { headers: h }).then(r => r.json()),
-      fetch("http://localhost:8000/gold-rates/today",  { headers: h }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/clients/`,          { headers: h }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/gold-rates/today`,  { headers: h }).then(r => r.json()),
     ]).then(([clientsData, ratesData]) => {
       setClients(Array.isArray(clientsData) ? clientsData : []);
       if (ratesData?.["22K"]) {
@@ -126,7 +126,7 @@ export default function NewOrderPage() {
         stones:             stonesPayload,
       };
 
-      const res = await fetch("http://localhost:8000/orders/", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(body),

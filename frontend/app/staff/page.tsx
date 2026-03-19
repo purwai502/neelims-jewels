@@ -58,17 +58,17 @@ export default function StaffPage() {
   const h     = { "Authorization": `Bearer ${token}` };
 
   const fetchStaff = useCallback(async () => {
-    const res = await fetch("http://localhost:8000/staff/", { headers: h });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/`, { headers: h });
     if (res.ok) setStaff(await res.json());
   }, []);
 
   const fetchMonthly = useCallback(async (month: number, year: number) => {
-    const res = await fetch(`http://localhost:8000/staff/attendance/monthly?month=${month}&year=${year}`, { headers: h });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/attendance/monthly?month=${month}&year=${year}`, { headers: h });
     if (res.ok) setMonthlyData(await res.json());
   }, []);
 
   const fetchDaily = useCallback(async (date: string) => {
-    const res = await fetch(`http://localhost:8000/staff/attendance/daily?date=${date}`, { headers: h });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/attendance/daily?date=${date}`, { headers: h });
     if (res.ok) {
       const data = await res.json();
       setDailySheet(data);
@@ -108,7 +108,7 @@ export default function StaffPage() {
     if (!selectedDate) return;
     setSavingAttendance(true);
     const records = Object.entries(pendingAtt).map(([staff_id, status]) => ({ staff_id, status }));
-    await fetch("http://localhost:8000/staff/attendance/bulk", {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/staff/attendance/bulk`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...h },
       body: JSON.stringify({ date: selectedDate, records }),

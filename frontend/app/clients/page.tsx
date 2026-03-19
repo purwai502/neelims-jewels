@@ -21,7 +21,7 @@ export default function ClientsPage() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
-    fetch("http://localhost:8000/clients/", {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/clients/`, {
       headers: { "Authorization": `Bearer ${token}` }
     })
       .then(r => r.json())

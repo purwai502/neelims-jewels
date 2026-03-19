@@ -119,9 +119,9 @@ export default function BuybackPage() {
     if (role === "EMPLOYEE") { router.push("/dashboard"); return; }
 
     Promise.all([
-      fetch("http://localhost:8000/products/",  { headers: { "Authorization": `Bearer ${token}` } }).then(r => r.json()),
-      fetch("http://localhost:8000/clients/",   { headers: { "Authorization": `Bearer ${token}` } }).then(r => r.json()),
-      fetch("http://localhost:8000/buybacks/",  { headers: { "Authorization": `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/`,  { headers: { "Authorization": `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/clients/`,   { headers: { "Authorization": `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/buybacks/`,  { headers: { "Authorization": `Bearer ${token}` } }).then(r => r.json()),
     ]).then(([p, c, b]) => {
       setProducts(Array.isArray(p) ? p : []);
       setClients(Array.isArray(c) ? c : []);
@@ -130,7 +130,7 @@ export default function BuybackPage() {
   }, [router]);
 
   const refreshRecords = (token: string) => {
-    fetch("http://localhost:8000/buybacks/", { headers: { "Authorization": `Bearer ${token}` } })
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/buybacks/`, { headers: { "Authorization": `Bearer ${token}` } })
       .then(r => r.json()).then(b => setRecords(Array.isArray(b) ? b : []));
   };
 
@@ -144,7 +144,7 @@ export default function BuybackPage() {
     setDone(false);
     setOriginalClientConfirmed(null);
     setSelectedClient("");
-    fetch(`http://localhost:8000/buybacks/calculate/${selectedProduct}`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/buybacks/calculate/${selectedProduct}`, {
       headers: { "Authorization": `Bearer ${token}` }
     }).then(r => {
       if (!r.ok) throw new Error("Failed");
@@ -172,7 +172,7 @@ export default function BuybackPage() {
     const token = localStorage.getItem("token");
     try {
       const res = await fetch(
-        `http://localhost:8000/buybacks/process/${calc.product_id}/${selectedClient}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/buybacks/process/${calc.product_id}/${selectedClient}`,
         { method: "POST", headers: { "Authorization": `Bearer ${token}` } }
       );
       if (!res.ok) throw new Error("Failed");

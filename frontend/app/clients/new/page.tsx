@@ -24,7 +24,7 @@ export default function NewClientPage() {
     setError("");
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:8000/clients/", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clients/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

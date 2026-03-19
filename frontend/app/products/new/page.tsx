@@ -56,8 +56,8 @@ export default function NewProductPage() {
     if (!token) { router.push("/login"); return; }
     const h = { "Authorization": `Bearer ${token}` };
     Promise.all([
-      fetch("http://localhost:8000/orders/",           { headers: h }).then(r => r.json()),
-      fetch("http://localhost:8000/gold-rates/today",  { headers: h }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/`,           { headers: h }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/gold-rates/today`,  { headers: h }).then(r => r.json()),
     ]).then(([ordData, rateData]) => {
       setOrders(Array.isArray(ordData) ? ordData.filter((o: Order) => o.status === "DRAFT") : []);
       if (rateData?.["22K"]) {
@@ -157,7 +157,7 @@ export default function NewProductPage() {
         })).filter(s => s.stone_name.trim()),
       };
 
-      const res = await fetch("http://localhost:8000/products/", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(body),
@@ -173,7 +173,7 @@ export default function NewProductPage() {
       if (imageFile && created.id) {
         const formData = new FormData();
         formData.append("file", imageFile);
-        await fetch(`http://localhost:8000/products/${created.id}/image`, {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${created.id}/image`, {
           method: "POST",
           headers: { "Authorization": `Bearer ${token}` },
           body: formData,

@@ -63,8 +63,8 @@ export default function ProductDetailPage() {
     if (!token) { router.push("/login"); return; }
     const h = { "Authorization": `Bearer ${token}` };
     Promise.all([
-      fetch(`http://localhost:8000/products/${id}`, { headers: h }).then(r => r.json()),
-      fetch(`http://localhost:8000/buybacks/product/${id}`, { headers: h }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${id}`, { headers: h }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/buybacks/product/${id}`, { headers: h }).then(r => r.json()),
     ]).then(([productData, buybackData]) => {
       setProduct(productData);
       setBuybacks(Array.isArray(buybackData) ? buybackData : []);
@@ -79,13 +79,13 @@ export default function ProductDetailPage() {
     const token = localStorage.getItem("token");
     const formData = new FormData();
     formData.append("file", file);
-    const res = await fetch(`http://localhost:8000/products/${product.id}/image`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${product.id}/image`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${token}` },
       body: formData,
     });
     if (res.ok) {
-      const updated = await fetch(`http://localhost:8000/products/${id}`, {
+      const updated = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${id}`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json());
       setProduct(updated);
@@ -97,12 +97,12 @@ export default function ProductDetailPage() {
     if (!product) return;
     setMarkingSold(true);
     const token = localStorage.getItem("token");
-    const res = await fetch(`http://localhost:8000/products/${product.id}/mark-sold`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${product.id}/mark-sold`, {
       method: "PATCH",
       headers: { "Authorization": `Bearer ${token}` },
     });
     if (res.ok) {
-      const updated = await fetch(`http://localhost:8000/products/${id}`, {
+      const updated = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${id}`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json());
       setProduct(updated);
@@ -184,7 +184,7 @@ export default function ProductDetailPage() {
             justifyContent: "center", overflow: "hidden", marginBottom: "12px",
           }}>
             {product.image_path ? (
-              <img src={`http://localhost:8000/${product.image_path}`} alt={product.name}
+              <img src={`${process.env.NEXT_PUBLIC_API_URL}/${product.image_path}`} alt={product.name}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
               <div style={{ textAlign: "center" }}>
@@ -218,7 +218,7 @@ export default function ProductDetailPage() {
                   border: "1px solid var(--border-gold)", overflow: "hidden",
                 }}>
                   <img
-                    src={`http://localhost:8000/${product.image_path}`}
+                    src={`${process.env.NEXT_PUBLIC_API_URL}/${product.image_path}`}
                     alt={product.name}
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                   />

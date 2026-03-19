@@ -89,10 +89,10 @@ export default function SalePage() {
     const h = { Authorization: `Bearer ${token}` };
 
     Promise.all([
-      fetch(`http://localhost:8000/products/${id}`, { headers: h }).then((r) =>
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${id}`, { headers: h }).then((r) =>
         r.json(),
       ),
-      fetch(`http://localhost:8000/clients/`, { headers: h }).then((r) =>
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/clients/`, { headers: h }).then((r) =>
         r.json(),
       ),
     ])
@@ -114,7 +114,7 @@ export default function SalePage() {
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
-        `http://localhost:8000/products/${product.id}/mark-sold`,
+        `${process.env.NEXT_PUBLIC_API_URL}/products/${product.id}/mark-sold`,
         {
           method: "PATCH",
           headers: {
@@ -194,7 +194,7 @@ export default function SalePage() {
   });
 
   const imageUrl = product.image_path
-    ? `http://localhost:8000/${product.image_path}`
+    ? `${process.env.NEXT_PUBLIC_API_URL}/${product.image_path}`
     : null;
 
   const G = "#8B6914";
