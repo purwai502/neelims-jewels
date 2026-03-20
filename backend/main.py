@@ -14,9 +14,9 @@ from routers import (
     payments_router,
     buybacks_router,
     staff_router,
-    reports_router
+    reports_router,
+    accounts_router
 )
-from routers.accounts import router as accounts_router
 import models  # ensures all models are registered with Base before create_all
 from database import engine, Base
 

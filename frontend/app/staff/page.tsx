@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -36,7 +36,7 @@ const SHORT_MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct
 
 const fmt = (n: number) => Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
-export default function StaffPage() {
+function StaffContent() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const dateParam    = searchParams.get("date");
@@ -373,5 +373,13 @@ export default function StaffPage() {
       </div>
 
     </div>
+  );
+}
+
+export default function StaffPage() {
+  return (
+    <Suspense>
+      <StaffContent />
+    </Suspense>
   );
 }

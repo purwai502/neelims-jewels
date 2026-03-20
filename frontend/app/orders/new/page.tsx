@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -24,7 +24,7 @@ const fmt0 = (n: number) => Number(n || 0).toLocaleString("en-IN", { maximumFrac
 
 let stoneCounter = 0;
 
-export default function NewOrderPage() {
+function NewOrderForm() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const prefilledClient = searchParams.get("client");
@@ -385,5 +385,13 @@ export default function NewOrderPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function NewOrderPage() {
+  return (
+    <Suspense>
+      <NewOrderForm />
+    </Suspense>
   );
 }
