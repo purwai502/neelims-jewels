@@ -52,6 +52,8 @@ def create_product(
         making_charges     = product_data.making_charges,
         gold_rate_snapshot = gold_rate_snapshot,
         total_price        = total_price,
+        cost_price         = product_data.cost_price,
+        vendor_id          = product_data.vendor_id,
         order_id           = product_data.order_id,
         barcode            = barcode,
         created_by         = current_user.id
@@ -136,6 +138,8 @@ def update_product(
     product.name           = product_data.name
     product.description    = product_data.description
     product.making_charges = product_data.making_charges
+    product.cost_price     = product_data.cost_price
+    product.vendor_id      = product_data.vendor_id
 
     db.commit()
     db.refresh(product)

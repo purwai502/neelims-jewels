@@ -33,6 +33,7 @@ interface Summary {
   total_revenue: number; total_orders: number; avg_order_value: number;
   total_clients: number; total_gold_exchange: number;
   total_making_charges: number; total_outstanding: number;
+  total_cost: number; gross_profit: number;
 }
 
 export default function ReportsPage() {
@@ -50,6 +51,7 @@ export default function ReportsPage() {
   const [metalBreakdown, setMetal]      = useState<any[]>([]);
   const [goldExchange, setGoldExchange] = useState<any[]>([]);
   const [inactive, setInactive]         = useState<any[]>([]);
+  const [profitByMonth, setProfit]      = useState<any[]>([]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -68,7 +70,8 @@ export default function ReportsPage() {
       fetch(`${B}/reports/metal-breakdown`,      { headers: h }).then(r => r.json()),
       fetch(`${B}/reports/gold-exchange-summary`,{ headers: h }).then(r => r.json()),
       fetch(`${B}/reports/inactive-clients`,     { headers: h }).then(r => r.json()),
-    ]).then(([s, rev, ord, meth, cli, out, met, gex, ina]) => {
+      fetch(`${B}/reports/profit-by-month`,      { headers: h }).then(r => r.json()),
+    ]).then(([s, rev, ord, meth, cli, out, met, gex, ina, prof]) => {
       setSummary(s);
       setRevenue(Array.isArray(rev) ? rev : []);
       setOrders(Array.isArray(ord) ? ord : []);
@@ -78,6 +81,7 @@ export default function ReportsPage() {
       setMetal(Array.isArray(met) ? met : []);
       setGoldExchange(Array.isArray(gex) ? gex : []);
       setInactive(Array.isArray(ina) ? ina : []);
+      setProfit(Array.isArray(prof) ? prof : []);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [router]);
@@ -179,6 +183,8 @@ export default function ReportsPage() {
         ["Outstanding Dues",      summary?.total_outstanding   || 0],
         ["Making Charges Earned", summary?.total_making_charges || 0],
         ["Gold Exchange Value",   summary?.total_gold_exchange || 0],
+        ["Total Studio Cost",     summary?.total_cost          || 0],
+        ["Gross Profit",          summary?.gross_profit        || 0],
       ];
       const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
       summarySheet["!cols"] = [{ wch: 28 }, { wch: 20 }];
@@ -288,12 +294,56 @@ export default function ReportsPage() {
           <KpiCard label="Avg Order Value" value={`₹${fmt(summary?.avg_order_value || 0)}`} color={GOLD2} />
           <KpiCard label="Total Clients"   value={fmtInt(summary?.total_clients || 0)} color="var(--text-primary)" />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "16px" }}>
           <KpiCard label="Outstanding Dues"      value={`₹${fmt(summary?.total_outstanding || 0)}`}     color={outstanding.length > 0 ? RED : GREEN} sub={`${outstanding.length} order(s) unpaid`} />
           <KpiCard label="Making Charges Earned" value={`₹${fmt(summary?.total_making_charges || 0)}`}  color={GREEN} />
           <KpiCard label="Gold Exchange Value"   value={`₹${fmt(summary?.total_gold_exchange || 0)}`}   color={ORANGE} />
         </div>
+        {(summary?.total_cost || 0) > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+            <KpiCard label="Total Studio Cost"  value={`₹${fmt(summary?.total_cost || 0)}`}    color={ORANGE} sub="Sum of cost prices on sold items" />
+            <KpiCard label="Gross Profit"       value={`₹${fmt(summary?.gross_profit || 0)}`}  color={(summary?.gross_profit || 0) >= 0 ? GREEN : RED} sub="Revenue minus studio cost" />
+            <KpiCard label="Profit Margin"
+              value={`${summary?.total_revenue ? ((summary.gross_profit / summary.total_revenue) * 100).toFixed(1) : "0.0"}%`}
+              color={(summary?.gross_profit || 0) >= 0 ? GREEN : RED}
+              sub="Gross profit ÷ revenue" />
+          </div>
+        )}
       </Section>
+
+      {/* Profit Analysis */}
+      {profitByMonth.length > 0 && (
+        <Section title="Profit Analysis">
+          <div className="card-ornate" style={{ padding: "28px" }}>
+            <p style={{ fontFamily: "'Cormorant', serif", fontSize: "14px", fontStyle: "italic", color: "var(--text-muted)", marginBottom: "24px" }}>
+              Monthly breakdown of revenue vs. studio cost vs. gross profit (only for products with cost price set)
+            </p>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={profitByMonth} margin={{ top: 4, right: 16, left: 16, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <XAxis dataKey="label" tick={{ fill: MUTED, fontSize: 10 }} />
+                <YAxis tick={{ fill: MUTED, fontSize: 10 }} tickFormatter={(v: number) => `₹${(v/1000).toFixed(0)}k`} />
+                <Tooltip
+                  contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border-gold)", borderRadius: 0 }}
+                  labelStyle={{ color: GOLD, fontSize: 11 }}
+                  formatter={(v: unknown, name?: unknown) => [`₹${fmt(Number(v) || 0)}`, String(name || "").charAt(0).toUpperCase() + String(name || "").slice(1)]}
+                />
+                <Bar dataKey="revenue" fill={GOLD}  name="revenue" radius={[2,2,0,0]} />
+                <Bar dataKey="cost"    fill={ORANGE} name="cost"    radius={[2,2,0,0]} />
+                <Bar dataKey="profit"  fill={GREEN}  name="profit"  radius={[2,2,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <div style={{ display: "flex", justifyContent: "center", gap: "24px", marginTop: "12px" }}>
+              {[["Revenue", GOLD], ["Studio Cost", ORANGE], ["Gross Profit", GREEN]].map(([label, color]) => (
+                <div key={label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div style={{ width: "10px", height: "10px", background: color }} />
+                  <p style={{ fontSize: "10px", color: MUTED, letterSpacing: "0.08em" }}>{label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Section>
+      )}
 
       {/* Data Export Panel */}
       <Section title="Raw Data Export">

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 import os
 from routers import (
     auth_router,
@@ -20,7 +21,26 @@ from routers import (
 import models  # ensures all models are registered with Base before create_all
 from database import engine, Base
 
+
+def run_migrations():
+    try:
+        with engine.connect() as conn:
+            conn.execute(text(
+                "ALTER TABLE products ADD COLUMN IF NOT EXISTS cost_price NUMERIC(14,4)"
+            ))
+            conn.execute(text(
+                "ALTER TABLE products ADD COLUMN IF NOT EXISTS vendor_id UUID REFERENCES vendors(id)"
+            ))
+            conn.execute(text(
+                "ALTER TABLE users ALTER COLUMN email DROP NOT NULL"
+            ))
+            conn.commit()
+    except Exception as e:
+        print(f"[migration] skipped: {e}")
+
+
 Base.metadata.create_all(bind=engine)
+run_migrations()
 
 app = FastAPI(title="Neelima Jwels API")
 os.makedirs("uploads/products", exist_ok=True)

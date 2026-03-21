@@ -11,6 +11,8 @@ class ProductCreate(BaseModel):
     category:       Optional[str]   = None
     sub_category:   Optional[str]   = None
     making_charges: Optional[float] = 0
+    cost_price:     Optional[float] = None
+    vendor_id:      Optional[UUID]  = None
     order_id:       Optional[UUID]  = None
     stones:         Optional[List[ProductStoneCreate]] = []
 
@@ -26,6 +28,8 @@ class ProductOut(BaseModel):
     making_charges:     float
     gold_rate_snapshot: float
     total_price:        Optional[float]
+    cost_price:         Optional[float] = None
+    vendor_id:          Optional[UUID]  = None
     order_id:           Optional[UUID]
     barcode:            Optional[str]
     image_path:         Optional[str] = None

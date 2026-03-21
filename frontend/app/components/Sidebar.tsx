@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const navItems = [
   { label: "Dashboard",    href: "/dashboard",    icon: "◈", ownerOnly: false, staffHidden: false },
@@ -19,6 +19,7 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router   = useRouter();
   const [dark, setDark] = useState(false);
   const [role, setRole] = useState("");
 
@@ -132,7 +133,23 @@ export default function Sidebar() {
       </nav>
 
       {/* Bottom */}
-      <div style={{ padding: "16px", borderTop: "1px solid rgba(201,168,76,0.15)" }}>
+      <div style={{ padding: "16px", borderTop: "1px solid rgba(201,168,76,0.15)", display: "flex", flexDirection: "column", gap: "8px" }}>
+        {role === "OWNER" && (
+          <button onClick={() => router.push("/users/new")} style={{
+            width: "100%", padding: "10px",
+            background: "transparent",
+            border: "1px solid rgba(201,168,76,0.35)",
+            color: "rgba(201,168,76,0.85)",
+            fontFamily: "'Didact Gothic', sans-serif",
+            fontSize: "10px", letterSpacing: "0.2em",
+            textTransform: "uppercase", cursor: "pointer",
+            transition: "all 0.3s ease",
+            display: "flex", alignItems: "center",
+            justifyContent: "center", gap: "8px",
+          }}>
+            ◉  Add User
+          </button>
+        )}
         <button onClick={toggleTheme} style={{
           width: "100%", padding: "10px",
           background: "transparent",

@@ -18,6 +18,8 @@ class Product(Base):
     making_charges     = Column(Numeric(12, 4), nullable=False, default=0)
     gold_rate_snapshot = Column(Numeric(12, 4), nullable=False, server_default="0")
     total_price        = Column(Numeric(14, 4), nullable=True)
+    cost_price         = Column(Numeric(14, 4), nullable=True)
+    vendor_id          = Column(UUID(as_uuid=True), ForeignKey("vendors.id"), nullable=True)
     order_id           = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=True)
     barcode            = Column(String(50), nullable=True, unique=True)
     image_path         = Column(String(255), nullable=True)

@@ -5,6 +5,7 @@ import Link from "next/link";
 
 interface Order { id: string; status: string; notes: string | null; }
 interface GoldRates { "24K": number; "22K": number; "18K": number; "14K": number; }
+interface Vendor { id: string; business_name: string; }
 
 interface StoneRow {
   id: number;
@@ -42,11 +43,14 @@ export default function NewProductPage() {
   const [category,      setCategory]      = useState("");
   const [subCategory,   setSubCategory]   = useState("");
   const [stones,        setStones]        = useState<StoneRow[]>([]);
+  const [costPrice,     setCostPrice]     = useState("");
+  const [vendorId,      setVendorId]      = useState("");
   const [imageFile,     setImageFile]     = useState<File | null>(null);
   const [imagePreview,  setImagePreview]  = useState<string | null>(null);
 
   // data
   const [orders,    setOrders]    = useState<Order[]>([]);
+  const [vendors,   setVendors]   = useState<Vendor[]>([]);
   const [goldRates, setGoldRates] = useState<GoldRates | null>(null);
   const [saving,    setSaving]    = useState(false);
   const [error,     setError]     = useState("");
@@ -58,12 +62,14 @@ export default function NewProductPage() {
     Promise.all([
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/`,           { headers: h }).then(r => r.json()),
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/gold-rates/today`,  { headers: h }).then(r => r.json()),
-    ]).then(([ordData, rateData]) => {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendors/`,          { headers: h }).then(r => r.json()),
+    ]).then(([ordData, rateData, vendData]) => {
       setOrders(Array.isArray(ordData) ? ordData.filter((o: Order) => o.status === "DRAFT") : []);
       if (rateData?.["22K"]) {
         setGoldRate(String(rateData["22K"]));
         setGoldRates(rateData);
       }
+      setVendors(Array.isArray(vendData) ? vendData : []);
     });
   }, [router]);
 
@@ -146,6 +152,8 @@ export default function NewProductPage() {
         category:           category || null,
         sub_category:       subCategory || null,
         making_charges:     parseFloat(makingCharges) || 0,
+        cost_price:         parseFloat(costPrice) || null,
+        vendor_id:          vendorId || null,
         total_price:        parseFloat(finalPrice),
         order_id:           orderId || null,
         stones: stones.map(s => ({
@@ -381,6 +389,18 @@ export default function NewProductPage() {
             </select>
           </div>
 
+          {/* Vendor */}
+          <div>
+            <FieldLabel>Vendor / Supplier (optional)</FieldLabel>
+            <select value={vendorId} onChange={e => setVendorId(e.target.value)}
+              style={{ ...inputStyle, cursor: "pointer" }}>
+              <option value="">— No vendor —</option>
+              {vendors.map(v => (
+                <option key={v.id} value={v.id}>{v.business_name}</option>
+              ))}
+            </select>
+          </div>
+
         </div>
       </div>
 
@@ -486,6 +506,20 @@ export default function NewProductPage() {
             <input type="number" value={makingCharges} onChange={e => setMakingCharges(e.target.value)}
               placeholder="e.g. 96788"
               style={{ ...inputStyle, fontSize: "15px", fontFamily: "'Playfair Display', serif", color: "#5CB87A" }} />
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ padding: "14px 20px", borderRight: "1px solid var(--border)" }}>
+            <p style={{ fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>
+              Studio Cost Price (optional)
+            </p>
+            <p style={{ fontSize: "10px", color: "var(--text-muted)", fontStyle: "italic" }}>What the studio paid for this product</p>
+          </div>
+          <div style={{ padding: "10px 16px" }}>
+            <input type="number" value={costPrice} onChange={e => setCostPrice(e.target.value)}
+              placeholder="e.g. 750000"
+              style={{ ...inputStyle, fontSize: "15px", fontFamily: "'Playfair Display', serif", color: "#E8A45A" }} />
           </div>
         </div>
 

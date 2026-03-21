@@ -92,13 +92,49 @@ def get_vendor_balance(
         raise HTTPException(status_code=404, detail="Vendor not found")
 
     from sqlalchemy import text
-    result = db.execute(
-        text("SELECT balance FROM account_balances WHERE account_id = :account_id"),
-        {"account_id": str(vendor.account_id)}
-    ).fetchone()
+    row = db.execute(text("""
+        SELECT
+            COALESCE(SUM(pr.cost_price), 0)::float                       AS total_goods_received,
+            COALESCE(ab.balance, 0)::float                               AS total_paid,
+            (COALESCE(SUM(pr.cost_price), 0) - COALESCE(ab.balance, 0))::float AS balance_due
+        FROM vendors v
+        LEFT JOIN products pr ON pr.vendor_id = v.id AND pr.cost_price IS NOT NULL
+        LEFT JOIN account_balances ab ON ab.account_id = v.account_id
+        WHERE v.id = :vendor_id
+        GROUP BY ab.balance
+    """), {"vendor_id": vendor_id}).fetchone()
 
     return {
-        "vendor_id":   vendor_id,
-        "vendor_name": vendor.business_name,
-        "balance":     float(result[0]) if result else 0.0
+        "vendor_id":            vendor_id,
+        "vendor_name":          vendor.business_name,
+        "total_goods_received": float(row[0]) if row else 0.0,
+        "total_paid":           float(row[1]) if row else 0.0,
+        "balance_due":          float(row[2]) if row else 0.0,
     }
+
+
+@router.get("/{vendor_id}/products")
+def get_vendor_products(
+    vendor_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_or_above)
+):
+    vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    from sqlalchemy import text
+    rows = db.execute(text("""
+        SELECT
+            p.id, p.barcode, p.name, p.description,
+            p.weight::float, p.purity,
+            p.cost_price::float,
+            p.total_price::float,
+            p.is_sold,
+            p.created_at
+        FROM products p
+        WHERE p.vendor_id = :vendor_id
+        ORDER BY p.created_at DESC
+    """), {"vendor_id": vendor_id}).fetchall()
+
+    return [dict(r._mapping) for r in rows]

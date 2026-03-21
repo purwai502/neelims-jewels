@@ -30,7 +30,9 @@ def get_summary(
             COALESCE(SUM(CASE WHEN p.payment_method = 'GOLD_EXCHANGE'
                               THEN p.amount ELSE 0 END), 0)::float AS total_gold_exchange,
             COALESCE(SUM(pr.making_charges), 0)::float   AS total_making_charges,
-            COALESCE(SUM(o.final_price) - SUM(p.amount), 0)::float AS total_outstanding
+            COALESCE(SUM(o.final_price) - SUM(p.amount), 0)::float AS total_outstanding,
+            COALESCE((SELECT SUM(cost_price) FROM products WHERE is_sold = true AND cost_price IS NOT NULL), 0)::float AS total_cost,
+            (COALESCE(SUM(p.amount), 0) - COALESCE((SELECT SUM(cost_price) FROM products WHERE is_sold = true AND cost_price IS NOT NULL), 0))::float AS gross_profit
         FROM clients c
         LEFT JOIN orders   o  ON o.client_id = c.id
         LEFT JOIN payments p  ON p.order_id  = o.id
@@ -204,6 +206,37 @@ def inactive_clients(
     return rows_to_dicts(rows)
 
 
+@router.get("/profit-by-month")
+def profit_by_month(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_or_above),
+):
+    rows = db.execute(text("""
+        SELECT
+            TO_CHAR(DATE_TRUNC('month', pay.created_at), 'Mon YYYY') AS label,
+            DATE_TRUNC('month', pay.created_at)                       AS sort_key,
+            COALESCE(SUM(pay.amount), 0)::float                       AS revenue,
+            COALESCE((
+                SELECT SUM(pr2.cost_price)
+                FROM products pr2
+                WHERE pr2.is_sold = true
+                  AND pr2.cost_price IS NOT NULL
+                  AND DATE_TRUNC('month', pr2.created_at) = DATE_TRUNC('month', pay.created_at)
+            ), 0)::float AS cost,
+            (COALESCE(SUM(pay.amount), 0) - COALESCE((
+                SELECT SUM(pr2.cost_price)
+                FROM products pr2
+                WHERE pr2.is_sold = true
+                  AND pr2.cost_price IS NOT NULL
+                  AND DATE_TRUNC('month', pr2.created_at) = DATE_TRUNC('month', pay.created_at)
+            ), 0))::float AS profit
+        FROM payments pay
+        GROUP BY DATE_TRUNC('month', pay.created_at)
+        ORDER BY sort_key
+    """)).fetchall()
+    return rows_to_dicts(rows)
+
+
 @router.get("/export/all")
 def export_all_data(
     db: Session = Depends(get_db),
@@ -239,6 +272,7 @@ def export_all_data(
         SELECT p.id, p.barcode, p.description, p.weight::float,
                pu.display_name AS purity, p.making_charges::float,
                p.gold_rate_snapshot::float, p.total_price::float,
+               p.cost_price::float, p.vendor_id,
                o.notes AS order_notes, p.created_at
         FROM products p
         LEFT JOIN purities pu ON p.purity = pu.code

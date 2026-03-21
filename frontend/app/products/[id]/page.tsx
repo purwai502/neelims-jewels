@@ -33,6 +33,8 @@ interface Product {
   making_charges: number;
   gold_rate_snapshot: number;
   total_price: number;
+  cost_price: number | null;
+  vendor_id: string | null;
   barcode: string;
   order_id: string | null;
   image_path: string | null;
@@ -57,6 +59,7 @@ export default function ProductDetailPage() {
   const [uploading,    setUploading]    = useState(false);
   const [markingSold,  setMarkingSold]  = useState(false);
   const [buybacks,     setBuybacks]     = useState<BuybackRecord[]>([]);
+  const [vendorName,   setVendorName]   = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -69,6 +72,12 @@ export default function ProductDetailPage() {
       setProduct(productData);
       setBuybacks(Array.isArray(buybackData) ? buybackData : []);
       setLoading(false);
+      if (productData?.vendor_id) {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendors/${productData.vendor_id}`, { headers: h })
+          .then(r => r.json())
+          .then(v => setVendorName(v?.business_name || null))
+          .catch(() => {});
+      }
     }).catch(() => setLoading(false));
   }, [id, router]);
 
@@ -329,13 +338,18 @@ export default function ProductDetailPage() {
         display: "flex", gap: "40px", flexWrap: "wrap",
       }}>
         {[
-          { label: "Barcode",   value: product.barcode },
-          { label: "Gold Rate", value: `₹${fmt0(product.gold_rate_snapshot)}/g (at creation)` },
-          { label: "Order",     value: product.order_id ? product.order_id.slice(0, 8) + "…" : "Stock item" },
+          { label: "Barcode",     value: product.barcode },
+          { label: "Gold Rate",   value: `₹${fmt0(product.gold_rate_snapshot)}/g (at creation)` },
+          { label: "Order",       value: product.order_id ? product.order_id.slice(0, 8) + "…" : "Stock item" },
+          ...(vendorName ? [{ label: "Vendor", value: vendorName }] : []),
+          ...(product.cost_price ? [{ label: "Studio Cost", value: `₹${fmt(product.cost_price)}` }] : []),
+          ...(product.cost_price && product.is_sold
+            ? [{ label: "Gross Profit", value: `₹${fmt(finalPrice - product.cost_price)}` }]
+            : []),
         ].map(({ label, value }) => (
           <div key={label}>
-            <p style={{ fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "4px" }}>{label}</p>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)", fontFamily: "'Didact Gothic', sans-serif" }}>{value}</p>
+            <p style={{ fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: label === "Gross Profit" ? "#5CB87A" : label === "Studio Cost" ? "#E8A45A" : "var(--gold)", marginBottom: "4px" }}>{label}</p>
+            <p style={{ fontSize: "12px", color: label === "Gross Profit" ? "#5CB87A" : label === "Studio Cost" ? "#E8A45A" : "var(--text-secondary)", fontFamily: "'Didact Gothic', sans-serif" }}>{value}</p>
           </div>
         ))}
       </div>
