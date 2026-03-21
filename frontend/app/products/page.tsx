@@ -30,7 +30,7 @@ interface Product {
 }
 
 const CATEGORIES     = ["Jewellery", "Art", "Other"];
-const SUB_CATEGORIES = ["Ring", "Earring", "Neck Piece", "Bracelet", "Other"];
+const SUB_CATEGORIES = ["Ring", "Earring", "Neck Piece", "Bracelet", "Sets", "Pendants", "Diamonds", "Raw", "Accessories", "Other"];
 const PURITIES       = ["24K", "22K", "18K", "14K"];
 
 export default function ProductsPage() {

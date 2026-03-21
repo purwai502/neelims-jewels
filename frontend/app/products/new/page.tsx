@@ -20,7 +20,7 @@ interface StoneRow {
 const METAL_TYPES   = ["Gold", "Silver", "Platinum", "Other"];
 const GOLD_PURITIES = ["24K", "22K", "18K", "14K"];
 const CATEGORIES    = ["Jewellery", "Art", "Other"];
-const SUB_CATEGORIES = ["Ring", "Earring", "Neck Piece", "Bracelet", "Other"];
+const SUB_CATEGORIES = ["Ring", "Earring", "Neck Piece", "Bracelet", "Sets", "Pendants", "Diamonds", "Raw", "Accessories", "Other"];
 
 const fmt  = (n: number) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
