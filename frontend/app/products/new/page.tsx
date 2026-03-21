@@ -43,10 +43,11 @@ export default function NewProductPage() {
   const [category,      setCategory]      = useState("");
   const [subCategory,   setSubCategory]   = useState("");
   const [stones,        setStones]        = useState<StoneRow[]>([]);
-  const [costPrice,     setCostPrice]     = useState("");
-  const [vendorId,      setVendorId]      = useState("");
-  const [imageFile,     setImageFile]     = useState<File | null>(null);
-  const [imagePreview,  setImagePreview]  = useState<string | null>(null);
+  const [costPrice,        setCostPrice]        = useState("");
+  const [vendorId,         setVendorId]         = useState("");
+  const [imageFile,        setImageFile]        = useState<File | null>(null);
+  const [imagePreview,     setImagePreview]     = useState<string | null>(null);
+  const [manualFinalPrice, setManualFinalPrice] = useState(false);
 
   // data
   const [orders,    setOrders]    = useState<Order[]>([]);
@@ -98,6 +99,14 @@ export default function NewProductPage() {
   const goldValue   = metalType === "Gold" ? (parseFloat(goldWeight) || 0) * (parseFloat(goldRate) || 0) : 0;
   const stonesTotal = stones.reduce((s, st) => s + (parseFloat(st.total_price) || 0), 0);
   const costing     = goldValue + stonesTotal;
+  const autoFinal   = costing + (parseFloat(makingCharges) || 0);
+
+  // keep final price in sync unless user has overridden it
+  useEffect(() => {
+    if (!manualFinalPrice) {
+      setFinalPrice(autoFinal > 0 ? String(autoFinal.toFixed(2)) : "");
+    }
+  }, [autoFinal, manualFinalPrice]);
 
   // stone helpers
   const addStone = () => {
@@ -545,12 +554,22 @@ export default function NewProductPage() {
             <p style={{ fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "4px" }}>
               Final Price *
             </p>
-            <p style={{ fontSize: "10px", color: "var(--text-muted)", fontStyle: "italic" }}>Enter the actual selling price manually</p>
+            {manualFinalPrice ? (
+              <button onClick={() => setManualFinalPrice(false)} style={{
+                background: "none", border: "none", padding: 0, cursor: "pointer",
+                fontSize: "10px", color: "var(--gold)", fontStyle: "italic", textDecoration: "underline",
+                fontFamily: "'Didact Gothic', sans-serif",
+              }}>↩ Reset to auto ({autoFinal > 0 ? `₹${autoFinal.toLocaleString("en-IN", { maximumFractionDigits: 0 })}` : "—"})</button>
+            ) : (
+              <p style={{ fontSize: "10px", color: "var(--text-muted)", fontStyle: "italic" }}>Auto-calculated · edit to override</p>
+            )}
           </div>
           <div style={{ padding: "12px 16px" }}>
-            <input type="number" value={finalPrice} onChange={e => setFinalPrice(e.target.value)}
+            <input type="number" value={finalPrice}
+              onChange={e => { setManualFinalPrice(true); setFinalPrice(e.target.value); }}
               placeholder="e.g. 936620"
-              style={{ ...inputStyle, fontSize: "20px", fontFamily: "'Playfair Display', serif", color: "var(--gold)", background: "transparent" }} />
+              style={{ ...inputStyle, fontSize: "20px", fontFamily: "'Playfair Display', serif", color: "var(--gold)", background: "transparent",
+                outline: manualFinalPrice ? "1px solid var(--gold)" : "none" }} />
           </div>
         </div>
       </div>
