@@ -6,6 +6,7 @@ class ProductStoneCreate(BaseModel):
     stone_name:      str
     weight:          Optional[float] = None
     price_per_carat: Optional[float] = None
+    total_price:     Optional[float] = None
     notes:           Optional[str]   = None
 
 class ProductStoneOut(BaseModel):

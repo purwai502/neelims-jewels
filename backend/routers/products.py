@@ -62,13 +62,13 @@ def create_product(
     db.flush()
 
     for stone_data in (product_data.stones or []):
-        stone_total = (stone_data.weight or 0) * (stone_data.price_per_carat or 0)
+        computed = (stone_data.weight or 0) * (stone_data.price_per_carat or 0)
         stone = ProductStone(
             product_id      = product.id,
             stone_name      = stone_data.stone_name,
             weight          = stone_data.weight,
             price_per_carat = stone_data.price_per_carat,
-            total_price     = stone_total,
+            total_price     = stone_data.total_price if stone_data.total_price is not None else computed,
             notes           = stone_data.notes
         )
         db.add(stone)
@@ -151,13 +151,13 @@ def update_product(
     # replace stones
     db.query(ProductStone).filter(ProductStone.product_id == product.id).delete()
     for stone_data in (product_data.stones or []):
-        stone_total = (stone_data.weight or 0) * (stone_data.price_per_carat or 0)
+        computed = (stone_data.weight or 0) * (stone_data.price_per_carat or 0)
         db.add(ProductStone(
             product_id      = product.id,
             stone_name      = stone_data.stone_name,
             weight          = stone_data.weight,
             price_per_carat = stone_data.price_per_carat,
-            total_price     = stone_total,
+            total_price     = stone_data.total_price if stone_data.total_price is not None else computed,
             notes           = stone_data.notes,
         ))
 
