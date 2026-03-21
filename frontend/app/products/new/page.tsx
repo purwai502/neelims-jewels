@@ -130,6 +130,22 @@ export default function NewProductPage() {
     setImagePreview(URL.createObjectURL(file));
   };
 
+  const applyImageFile = (file: File) => {
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const item = Array.from(e.clipboardData?.items || []).find(i => i.type.startsWith("image/"));
+      if (!item) return;
+      const file = item.getAsFile();
+      if (file) applyImageFile(file);
+    };
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, []);
+
   const handleSubmit = async () => {
     if (!name.trim())   { setError("Product name is required"); return; }
     if (!grossWeight)   { setError("Gross weight is required"); return; }
@@ -250,7 +266,8 @@ export default function NewProductPage() {
               ) : (
                 <>
                   <p style={{ color: "var(--gold)", fontSize: "28px", marginBottom: "8px" }}>◇</p>
-                  <p style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.1em" }}>Click to upload image</p>
+                  <p style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.1em" }}>Click to upload</p>
+                  <p style={{ fontSize: "9px", color: "var(--text-muted)", letterSpacing: "0.08em", marginTop: "4px" }}>or paste (Ctrl+V)</p>
                 </>
               )}
             </div>
