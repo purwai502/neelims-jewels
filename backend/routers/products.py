@@ -4,7 +4,7 @@ from sqlalchemy import func
 from database import get_db
 from models.product import Product
 from models.product_stone import ProductStone
-from schemas.product import ProductCreate, ProductOut
+from schemas.product import ProductCreate, ProductUpdate, ProductOut
 from services.gold_service import get_rate_for_purity
 from services.barcode_service import generate_barcode
 from routers.users import get_current_user, require_manager_or_above
@@ -127,7 +127,7 @@ def get_product(
 @router.patch("/{product_id}", response_model=ProductOut)
 def update_product(
     product_id: str,
-    product_data: ProductCreate,
+    product_data: ProductUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager_or_above)
 ):
@@ -137,9 +137,29 @@ def update_product(
 
     product.name           = product_data.name
     product.description    = product_data.description
+    product.weight         = product_data.weight
+    product.gold_weight    = product_data.gold_weight
+    product.purity         = product_data.purity
+    product.category       = product_data.category
+    product.sub_category   = product_data.sub_category
     product.making_charges = product_data.making_charges
+    product.total_price    = product_data.total_price
     product.cost_price     = product_data.cost_price
     product.vendor_id      = product_data.vendor_id
+    product.order_id       = product_data.order_id
+
+    # replace stones
+    db.query(ProductStone).filter(ProductStone.product_id == product.id).delete()
+    for stone_data in (product_data.stones or []):
+        stone_total = (stone_data.weight or 0) * (stone_data.price_per_carat or 0)
+        db.add(ProductStone(
+            product_id      = product.id,
+            stone_name      = stone_data.stone_name,
+            weight          = stone_data.weight,
+            price_per_carat = stone_data.price_per_carat,
+            total_price     = stone_total,
+            notes           = stone_data.notes,
+        ))
 
     db.commit()
     db.refresh(product)

@@ -176,9 +176,14 @@ export default function ProductDetailPage() {
               </p>
             )}
           </div>
-          <button onClick={() => setShowTag(true)} className="btn-outline" style={{ fontSize: "11px", marginTop: "8px", flexShrink: 0 }}>
-            Generate Tag
-          </button>
+          <div style={{ display: "flex", gap: "8px", marginTop: "8px", flexShrink: 0 }}>
+            <Link href={`/products/${product.id}/edit`} style={{ textDecoration: "none" }}>
+              <button className="btn-outline" style={{ fontSize: "11px" }}>Edit</button>
+            </Link>
+            <button onClick={() => setShowTag(true)} className="btn-outline" style={{ fontSize: "11px" }}>
+              Generate Tag
+            </button>
+          </div>
         </div>
       </div>
 

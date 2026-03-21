@@ -3,6 +3,21 @@ from typing import Optional, List
 from uuid import UUID
 from schemas.product_stone import ProductStoneCreate, ProductStoneOut
 
+class ProductUpdate(BaseModel):
+    name:           str
+    description:    Optional[str]   = None
+    weight:         float
+    gold_weight:    Optional[float] = None
+    purity:         Optional[str]   = None
+    category:       Optional[str]   = None
+    sub_category:   Optional[str]   = None
+    making_charges: Optional[float] = 0
+    total_price:    Optional[float] = None
+    cost_price:     Optional[float] = None
+    vendor_id:      Optional[UUID]  = None
+    order_id:       Optional[UUID]  = None
+    stones:         Optional[List[ProductStoneCreate]] = []
+
 class ProductCreate(BaseModel):
     name:           str
     description:    Optional[str]   = None
