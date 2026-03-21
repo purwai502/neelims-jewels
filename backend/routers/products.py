@@ -40,7 +40,8 @@ def create_product(
         (s.weight or 0) * (s.price_per_carat or 0)
         for s in (product_data.stones or [])
     )
-    total_price = gold_value + stones_total + (product_data.making_charges or 0)
+    computed_price = gold_value + stones_total + (product_data.making_charges or 0)
+    total_price = product_data.total_price if product_data.total_price is not None else computed_price
 
     product = Product(
         name               = product_data.name,

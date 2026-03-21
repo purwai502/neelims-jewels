@@ -26,6 +26,7 @@ class ProductCreate(BaseModel):
     category:       Optional[str]   = None
     sub_category:   Optional[str]   = None
     making_charges: Optional[float] = 0
+    total_price:    Optional[float] = None
     cost_price:     Optional[float] = None
     vendor_id:      Optional[UUID]  = None
     order_id:       Optional[UUID]  = None
