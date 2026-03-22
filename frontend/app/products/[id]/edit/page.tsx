@@ -134,6 +134,15 @@ export default function EditProductPage() {
   const costing     = goldValue + stonesTotal;
   const autoFinal   = costing + (parseFloat(makingCharges) || 0);
 
+  // auto-fill making charges as 20% of gold value for Jewellery
+  const autoMaking = category === "Jewellery" && goldValue > 0 ? goldValue * 0.20 : null;
+
+  useEffect(() => {
+    if (autoMaking !== null) {
+      setMakingCharges(autoMaking.toFixed(2));
+    }
+  }, [autoMaking]);
+
   useEffect(() => {
     if (!manualFinalPrice) {
       setFinalPrice(autoFinal > 0 ? String(autoFinal.toFixed(2)) : "");
@@ -490,6 +499,9 @@ export default function EditProductPage() {
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", borderBottom: "1px solid var(--border)" }}>
           <div style={{ padding: "14px 20px", borderRight: "1px solid var(--border)" }}>
             <p style={{ fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>Labour / Making Charges</p>
+            <p style={{ fontSize: "10px", color: "var(--text-muted)", fontStyle: "italic" }}>
+              {autoMaking !== null ? "Auto: 20% of gold value · edit to override" : "Enter manually"}
+            </p>
           </div>
           <div style={{ padding: "10px 16px" }}>
             <input type="number" value={makingCharges} onChange={e => setMakingCharges(e.target.value)} placeholder="e.g. 96788"
