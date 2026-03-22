@@ -198,6 +198,22 @@ async def upload_product_image(
     return { "image_path": filepath }
 
 
+@router.delete("/{product_id}")
+def delete_product(
+    product_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_or_above)
+):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    # delete stones first (FK constraint)
+    db.query(ProductStone).filter(ProductStone.product_id == product.id).delete()
+    db.delete(product)
+    db.commit()
+    return {"detail": "Product deleted"}
+
+
 class MarkSoldRequest(BaseModel):
     client_id: Optional[str] = None
 

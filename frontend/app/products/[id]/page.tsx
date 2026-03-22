@@ -58,6 +58,7 @@ export default function ProductDetailPage() {
   const [showTag,      setShowTag]      = useState(false);
   const [uploading,    setUploading]    = useState(false);
   const [markingSold,  setMarkingSold]  = useState(false);
+  const [deleting,     setDeleting]     = useState(false);
   const [buybacks,     setBuybacks]     = useState<BuybackRecord[]>([]);
   const [vendorName,   setVendorName]   = useState<string | null>(null);
 
@@ -100,6 +101,23 @@ export default function ProductDetailPage() {
       setProduct(updated);
     }
     setUploading(false);
+  };
+
+  const handleDelete = async () => {
+    if (!product) return;
+    if (!confirm(`Delete "${product.name}"? This cannot be undone.`)) return;
+    setDeleting(true);
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${product.id}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` },
+    });
+    if (res.ok) {
+      router.push("/products");
+    } else {
+      alert("Failed to delete product.");
+      setDeleting(false);
+    }
   };
 
   const handleMarkSold = async () => {
@@ -182,6 +200,14 @@ export default function ProductDetailPage() {
             </Link>
             <button onClick={() => setShowTag(true)} className="btn-outline" style={{ fontSize: "11px" }}>
               Generate Tag
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="btn-outline"
+              style={{ fontSize: "11px", color: "#E05C7A", borderColor: "rgba(224,92,122,0.4)" }}
+            >
+              {deleting ? "Deleting…" : "Delete"}
             </button>
           </div>
         </div>
