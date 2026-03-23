@@ -210,7 +210,7 @@ export default function ProductsPage() {
           No products found.
         </p>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
           {filtered.map((product) => (
             <Link key={product.id} href={`/products/${product.id}`} style={{ textDecoration: "none" }}>
               <div style={{
@@ -236,11 +236,11 @@ export default function ProductsPage() {
 
                 {/* Thumbnail image */}
                 {product.image_path ? (
-                  <div style={{ height: "180px", overflow: "hidden" }}>
+                  <div style={{ height: "180px", overflow: "hidden", background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <img
                       src={`${process.env.NEXT_PUBLIC_API_URL}/${product.image_path}`}
                       alt={product.name}
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                      style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
                     />
                   </div>
                 ) : (
