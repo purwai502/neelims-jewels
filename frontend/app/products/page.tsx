@@ -26,8 +26,11 @@ interface Product {
   image_path: string | null;
   order_id: string | null;
   is_sold: boolean;
+  set_id: string | null;
   stones: Stone[];
 }
+
+interface ProductSet { id: string; name: string; }
 
 const CATEGORIES     = ["Jewellery", "Art", "Other"];
 const SUB_CATEGORIES = ["Ring", "Earring", "Neck Piece", "Bracelet", "Sets", "Pendants", "Diamonds", "Raw", "Accessories", "Other"];
@@ -36,6 +39,7 @@ const PURITIES       = ["24K", "22K", "18K", "14K"];
 export default function ProductsPage() {
   const router = useRouter();
   const [products,          setProducts]          = useState<Product[]>([]);
+  const [sets,              setSets]              = useState<ProductSet[]>([]);
   const [loading,           setLoading]           = useState(true);
   const [search,            setSearch]            = useState("");
   const [statusFilter,      setStatusFilter]      = useState<"all" | "available" | "sold">("all");
@@ -48,11 +52,16 @@ export default function ProductsPage() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/`, {
-      headers: { "Authorization": `Bearer ${token}` }
-    })
-      .then(r => r.json())
-      .then(data => { setProducts(Array.isArray(data) ? data : []); setLoading(false); })
+    const h = { "Authorization": `Bearer ${token}` };
+    Promise.all([
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/`, { headers: h }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/sets/`,     { headers: h }).then(r => r.json()),
+    ])
+      .then(([prodData, setsData]) => {
+        setProducts(Array.isArray(prodData) ? prodData : []);
+        setSets(Array.isArray(setsData) ? setsData : []);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, [router]);
 
@@ -209,128 +218,95 @@ export default function ProductsPage() {
         <p style={{ color: "var(--text-muted)", fontFamily: "'Cormorant', serif", fontSize: "18px", fontStyle: "italic" }}>
           No products found.
         </p>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
-          {filtered.map((product) => (
-            <Link key={product.id} href={`/products/${product.id}`} style={{ textDecoration: "none" }}>
-              <div style={{
-                background: "var(--bg-card)",
-                border: "1px solid var(--border)",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                position: "relative",
-                overflow: "hidden",
-              }}
-              onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLDivElement;
-                el.style.borderColor = "var(--gold)";
-                el.style.transform = "translateY(-3px)";
-                el.style.boxShadow = "var(--shadow-gold)";
-              }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLDivElement;
-                el.style.borderColor = "var(--border)";
-                el.style.transform = "translateY(0)";
-                el.style.boxShadow = "none";
-              }}>
+      ) : (() => {
+        const setIds    = [...new Set(filtered.filter(p => p.set_id).map(p => p.set_id!))];
+        const standalone = filtered.filter(p => !p.set_id);
 
-                {/* Thumbnail image */}
-                {product.image_path ? (
-                  <div style={{ height: "180px", overflow: "hidden", background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <img
-                      src={`${process.env.NEXT_PUBLIC_API_URL}/${product.image_path}`}
-                      alt={product.name}
-                      style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-                    />
-                  </div>
-                ) : (
-                  <div style={{
-                    height: "80px", background: "var(--surface)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    borderBottom: "1px solid var(--border)",
-                  }}>
-                    <span style={{ color: "var(--gold)", fontSize: "24px", opacity: 0.3 }}>◇</span>
-                  </div>
+        const ProductCard = ({ product }: { product: Product }) => (
+          <Link key={product.id} href={`/products/${product.id}`} style={{ textDecoration: "none" }}>
+            <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", cursor: "pointer", transition: "all 0.3s ease", position: "relative", overflow: "hidden" }}
+              onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = "var(--gold)"; el.style.transform = "translateY(-3px)"; el.style.boxShadow = "var(--shadow-gold)"; }}
+              onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = "var(--border)"; el.style.transform = "translateY(0)"; el.style.boxShadow = "none"; }}>
+              {product.image_path ? (
+                <div style={{ height: "180px", overflow: "hidden", background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <img src={`${process.env.NEXT_PUBLIC_API_URL}/${product.image_path}`} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+                </div>
+              ) : (
+                <div style={{ height: "80px", background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid var(--border)" }}>
+                  <span style={{ color: "var(--gold)", fontSize: "24px", opacity: 0.3 }}>◇</span>
+                </div>
+              )}
+              <div style={{ padding: "18px 20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                  <p style={{ fontSize: "10px", letterSpacing: "0.2em", color: "var(--gold)", fontFamily: "'Didact Gothic', sans-serif", margin: 0 }}>{product.barcode}</p>
+                  <span style={{ fontSize: "8px", letterSpacing: "0.15em", textTransform: "uppercase", padding: "3px 8px", border: `1px solid ${product.is_sold ? "rgba(92,184,122,0.4)" : "rgba(201,168,76,0.4)"}`, color: product.is_sold ? "#5CB87A" : "var(--gold)", fontFamily: "'Didact Gothic', sans-serif" }}>{product.is_sold ? "Sold" : "Available"}</span>
+                </div>
+                {(product.category || product.sub_category) && (
+                  <p style={{ fontSize: "9px", letterSpacing: "0.12em", color: "var(--text-muted)", textTransform: "uppercase", margin: "0 0 6px" }}>{[product.category, product.sub_category].filter(Boolean).join(" · ")}</p>
                 )}
+                <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "17px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "6px" }}>{product.name}</h3>
+                {product.description && (
+                  <p style={{ fontFamily: "'Cormorant', serif", fontSize: "13px", fontStyle: "italic", color: "var(--text-muted)", marginBottom: "12px", lineHeight: 1.4 }}>{product.description.replace(/^\[.*?\]\s*/, "")}</p>
+                )}
+                <div style={{ display: "flex", gap: "16px", marginBottom: "14px" }}>
+                  {product.purity && <div><p style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-muted)" }}>Purity</p><p style={{ color: "var(--gold)", fontFamily: "'Playfair Display', serif", fontSize: "14px" }}>{product.purity}</p></div>}
+                  <div><p style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-muted)" }}>Weight</p><p style={{ color: "var(--text-primary)", fontSize: "13px" }}>{product.weight}g</p></div>
+                  {product.stones?.length > 0 && <div><p style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-muted)" }}>Stones</p><p style={{ color: "var(--text-primary)", fontSize: "13px" }}>{product.stones.map(s => s.stone_name).filter(Boolean).join(", ")}</p></div>}
+                </div>
+                <div style={{ borderTop: "1px solid var(--border-light)", paddingTop: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <p style={{ fontSize: "10px", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--text-muted)" }}>Total Value</p>
+                  <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "17px", fontWeight: 600, color: "var(--text-primary)" }}>₹{Number(product.total_price).toLocaleString("en-IN")}</p>
+                </div>
+              </div>
+              <span style={{ position: "absolute", bottom: "8px", right: "10px", color: "var(--gold)", fontSize: "7px", opacity: 0.4 }}>✦</span>
+            </div>
+          </Link>
+        );
 
-                <div style={{ padding: "18px 20px" }}>
-                  {/* Barcode + status */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                    <p style={{ fontSize: "10px", letterSpacing: "0.2em", color: "var(--gold)", fontFamily: "'Didact Gothic', sans-serif", margin: 0 }}>
-                      {product.barcode}
-                    </p>
-                    <span style={{
-                      fontSize: "8px", letterSpacing: "0.15em", textTransform: "uppercase",
-                      padding: "3px 8px",
-                      border: `1px solid ${product.is_sold ? "rgba(92,184,122,0.4)" : "rgba(201,168,76,0.4)"}`,
-                      color: product.is_sold ? "#5CB87A" : "var(--gold)",
-                      fontFamily: "'Didact Gothic', sans-serif",
-                    }}>{product.is_sold ? "Sold" : "Available"}</span>
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: "36px" }}>
+            {setIds.map(sid => {
+              const setInfo  = sets.find(s => s.id === sid);
+              const pieces   = filtered.filter(p => p.set_id === sid);
+              const allSold  = pieces.every(p => p.is_sold);
+              const combined = pieces.reduce((sum, p) => sum + Number(p.total_price || 0), 0);
+              return (
+                <div key={sid}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
+                    <span style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)", fontFamily: "'Didact Gothic', sans-serif", whiteSpace: "nowrap" }}>
+                      ✦ {setInfo?.name ?? "Unnamed Set"}
+                    </span>
+                    <span style={{ fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase", padding: "2px 8px", border: `1px solid ${allSold ? "rgba(92,184,122,0.4)" : "rgba(201,168,76,0.4)"}`, color: allSold ? "#5CB87A" : "var(--gold)", fontFamily: "'Didact Gothic', sans-serif", whiteSpace: "nowrap" }}>
+                      {allSold ? "Sold" : "Available"} · {pieces.length} piece{pieces.length !== 1 ? "s" : ""}
+                    </span>
+                    <div style={{ flex: 1, height: "1px", background: "var(--border-gold)", opacity: 0.4 }} />
+                    <span style={{ fontSize: "12px", color: "var(--text-muted)", fontFamily: "'Playfair Display', serif", fontStyle: "italic", whiteSpace: "nowrap" }}>
+                      Combined ₹{combined.toLocaleString("en-IN")}
+                    </span>
                   </div>
-
-                  {/* Category badge */}
-                  {(product.category || product.sub_category) && (
-                    <p style={{ fontSize: "9px", letterSpacing: "0.12em", color: "var(--text-muted)", textTransform: "uppercase", margin: "0 0 6px" }}>
-                      {[product.category, product.sub_category].filter(Boolean).join(" · ")}
-                    </p>
-                  )}
-
-                  {/* Name */}
-                  <h3 style={{
-                    fontFamily: "'Playfair Display', serif", fontSize: "17px", fontWeight: 600,
-                    color: "var(--text-primary)", marginBottom: "6px",
-                  }}>{product.name}</h3>
-
-                  {/* Description */}
-                  {product.description && (
-                    <p style={{
-                      fontFamily: "'Cormorant', serif", fontSize: "13px", fontStyle: "italic",
-                      color: "var(--text-muted)", marginBottom: "12px", lineHeight: 1.4,
-                    }}>{product.description.replace(/^\[.*?\]\s*/, "")}</p>
-                  )}
-
-                  {/* Details row */}
-                  <div style={{ display: "flex", gap: "16px", marginBottom: "14px" }}>
-                    {product.purity && (
-                      <div>
-                        <p style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-muted)" }}>Purity</p>
-                        <p style={{ color: "var(--gold)", fontFamily: "'Playfair Display', serif", fontSize: "14px" }}>{product.purity}</p>
-                      </div>
-                    )}
-                    <div>
-                      <p style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-muted)" }}>Weight</p>
-                      <p style={{ color: "var(--text-primary)", fontSize: "13px" }}>{product.weight}g</p>
-                    </div>
-                    {product.stones?.length > 0 && (
-                      <div>
-                        <p style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-muted)" }}>Stones</p>
-                        <p style={{ color: "var(--text-primary)", fontSize: "13px" }}>
-                          {product.stones.map(s => s.stone_name).filter(Boolean).join(", ") || product.stones.length}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Price */}
-                  <div style={{
-                    borderTop: "1px solid var(--border-light)", paddingTop: "12px",
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                  }}>
-                    <p style={{ fontSize: "10px", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--text-muted)" }}>
-                      Total Value
-                    </p>
-                    <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "17px", fontWeight: 600, color: "var(--text-primary)" }}>
-                      ₹{Number(product.total_price).toLocaleString("en-IN")}
-                    </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+                    {pieces.map(p => <ProductCard key={p.id} product={p} />)}
                   </div>
                 </div>
+              );
+            })}
 
-                <span style={{ position: "absolute", bottom: "8px", right: "10px", color: "var(--gold)", fontSize: "7px", opacity: 0.4 }}>✦</span>
+            {standalone.length > 0 && (
+              <div>
+                {setIds.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
+                    <span style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-muted)", fontFamily: "'Didact Gothic', sans-serif", whiteSpace: "nowrap" }}>Individual Pieces</span>
+                    <div style={{ flex: 1, height: "1px", background: "var(--border)", opacity: 0.4 }} />
+                  </div>
+                )}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+                  {standalone.map(p => <ProductCard key={p.id} product={p} />)}
+                </div>
               </div>
-            </Link>
-          ))}
-        </div>
-      )}
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

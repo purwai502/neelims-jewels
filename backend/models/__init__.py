@@ -3,6 +3,7 @@ from .account import Account
 from .client import Client
 from .vendor import Vendor
 from .gold_rate import GoldRate, GoldRateOverride
+from .product_set import ProductSet
 from .product import Product
 from .product_stone import ProductStone
 from .order import Order

@@ -35,6 +35,7 @@ interface Product {
   total_price: number;
   cost_price: number | null;
   vendor_id: string | null;
+  set_id: string | null;
   barcode: string;
   order_id: string | null;
   image_path: string | null;
@@ -61,6 +62,8 @@ export default function ProductDetailPage() {
   const [deleting,     setDeleting]     = useState(false);
   const [buybacks,     setBuybacks]     = useState<BuybackRecord[]>([]);
   const [vendorName,   setVendorName]   = useState<string | null>(null);
+  const [setName,      setSetName]      = useState<string | null>(null);
+  const [setMembers,   setSetMembers]   = useState<{id: string; name: string}[]>([]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -78,6 +81,19 @@ export default function ProductDetailPage() {
           .then(r => r.json())
           .then(v => setVendorName(v?.business_name || null))
           .catch(() => {});
+      }
+      if (productData?.set_id) {
+        Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/sets/`, { headers: h }).then(r => r.json()),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/?`, { headers: h }).then(r => r.json()),
+        ]).then(([setsData, allProducts]) => {
+          const s = Array.isArray(setsData) ? setsData.find((s: {id: string; name: string}) => s.id === productData.set_id) : null;
+          setSetName(s?.name || null);
+          const siblings = Array.isArray(allProducts)
+            ? allProducts.filter((p: {id: string; name: string; set_id: string}) => p.set_id === productData.set_id && p.id !== productData.id)
+            : [];
+          setSetMembers(siblings.map((p: {id: string; name: string}) => ({ id: p.id, name: p.name })));
+        }).catch(() => {});
       }
     }).catch(() => setLoading(false));
   }, [id, router]);
@@ -373,6 +389,7 @@ export default function ProductDetailPage() {
           { label: "Gold Rate",   value: `₹${fmt0(product.gold_rate_snapshot)}/g (at creation)` },
           { label: "Order",       value: product.order_id ? product.order_id.slice(0, 8) + "…" : "Stock item" },
           ...(vendorName ? [{ label: "Vendor", value: vendorName }] : []),
+          ...(setName ? [{ label: "Set", value: setName }] : []),
           ...(product.cost_price ? [{ label: "Studio Cost", value: `₹${fmt(product.cost_price)}` }] : []),
           ...(product.cost_price && product.is_sold
             ? [{ label: "Gross Profit", value: `₹${fmt(finalPrice - product.cost_price)}` }]
@@ -384,6 +401,24 @@ export default function ProductDetailPage() {
           </div>
         ))}
       </div>
+
+      {/* Set siblings */}
+      {setMembers.length > 0 && (
+        <div style={{ marginTop: "20px", padding: "14px 20px", background: "var(--bg-card)", border: "1px solid var(--border-gold)" }}>
+          <p style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "10px" }}>
+            ✦ Other pieces in {setName}
+          </p>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            {setMembers.map(m => (
+              <Link key={m.id} href={`/products/${m.id}`} style={{ textDecoration: "none" }}>
+                <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontFamily: "'Playfair Display', serif", padding: "4px 12px", border: "1px solid var(--border)", cursor: "pointer" }}>
+                  {m.name}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Process Sale */}
 {!product.is_sold && (

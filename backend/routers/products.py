@@ -148,6 +148,7 @@ def update_product(
     product.cost_price     = product_data.cost_price
     product.vendor_id      = product_data.vendor_id
     product.order_id       = product_data.order_id
+    product.set_id         = product_data.set_id
 
     # replace stones
     db.query(ProductStone).filter(ProductStone.product_id == product.id).delete()

@@ -5,6 +5,7 @@ import Link from "next/link";
 
 interface Order  { id: string; status: string; notes: string | null; }
 interface Vendor { id: string; business_name: string; }
+interface ProductSet { id: string; name: string; }
 interface GoldRates { "24K": number; "22K": number; "18K": number; "14K": number; }
 
 interface StoneRow {
@@ -51,8 +52,12 @@ export default function EditProductPage() {
   const [imagePreview,  setImagePreview]  = useState<string | null>(null);
   const [manualFinalPrice, setManualFinalPrice] = useState(true); // start true so existing price isn't overwritten on load
 
+  const [setId,     setSetId]     = useState<string>("");
+  const [newSetName, setNewSetName] = useState("");
+
   const [orders,    setOrders]    = useState<Order[]>([]);
   const [vendors,   setVendors]   = useState<Vendor[]>([]);
+  const [sets,      setSets]      = useState<ProductSet[]>([]);
   const [goldRates, setGoldRates] = useState<GoldRates | null>(null);
   const [saving,    setSaving]    = useState(false);
   const [error,     setError]     = useState("");
@@ -67,7 +72,8 @@ export default function EditProductPage() {
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/`,        { headers: h }).then(r => r.json()),
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/gold-rates/today`, { headers: h }).then(r => r.json()),
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendors/`,       { headers: h }).then(r => r.json()),
-    ]).then(([product, ordData, rateData, vendData]) => {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/sets/`,          { headers: h }).then(r => r.json()),
+    ]).then(([product, ordData, rateData, vendData, setsData]) => {
       // prefill from product
       const metalMatch = product.description?.match(/^\[(.+?)\]/);
       const mt = metalMatch ? metalMatch[1] : "Gold";
@@ -106,6 +112,8 @@ export default function EditProductPage() {
       setOrders(Array.isArray(ordData) ? ordData.filter((o: Order) => o.status === "DRAFT" || o.id === product.order_id) : []);
       if (rateData?.["22K"]) setGoldRates(rateData);
       setVendors(Array.isArray(vendData) ? vendData : []);
+      setSets(Array.isArray(setsData) ? setsData : []);
+      setSetId(product.set_id || "");
       setLoaded(true);
     }).catch(() => router.push(`/products/${id}`));
   }, [id, router]);
@@ -210,6 +218,7 @@ export default function EditProductPage() {
         cost_price:     parseFloat(costPrice) || null,
         vendor_id:      vendorId || null,
         order_id:       orderId || null,
+        set_id:         setId || null,
         stones: stones.map(s => ({
           stone_name:      s.stone_name,
           weight:          parseFloat(s.weight) || null,
@@ -421,6 +430,53 @@ export default function EditProductPage() {
               <option value="">— No vendor —</option>
               {vendors.map(v => <option key={v.id} value={v.id}>{v.business_name}</option>)}
             </select>
+          </div>
+
+          <div>
+            <FieldLabel>Set (optional)</FieldLabel>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <select value={setId} onChange={e => setSetId(e.target.value)} style={{ ...inputStyle, cursor: "pointer", flex: 1 }}>
+                <option value="">— Not part of a set —</option>
+                {sets.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              {setId && (
+                <button type="button" onClick={() => setSetId("")} style={{
+                  padding: "10px 14px", background: "transparent",
+                  border: "1px solid var(--border)", color: "var(--text-muted)",
+                  cursor: "pointer", fontSize: "11px", whiteSpace: "nowrap",
+                }}>✕ Unlink</button>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+              <input
+                value={newSetName}
+                onChange={e => setNewSetName(e.target.value)}
+                placeholder="Or create new set name…"
+                style={{ ...inputStyle, flex: 1, fontSize: "12px" }}
+              />
+              <button type="button"
+                disabled={!newSetName.trim()}
+                onClick={async () => {
+                  const token = localStorage.getItem("token");
+                  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/sets/`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                    body: JSON.stringify({ name: newSetName.trim() }),
+                  });
+                  if (res.ok) {
+                    const created = await res.json();
+                    setSets(prev => [...prev.filter(s => s.id !== created.id), created].sort((a, b) => a.name.localeCompare(b.name)));
+                    setSetId(created.id);
+                    setNewSetName("");
+                  }
+                }}
+                style={{
+                  padding: "10px 14px", background: "transparent",
+                  border: "1px solid var(--gold)", color: "var(--gold)",
+                  cursor: "pointer", fontSize: "11px", whiteSpace: "nowrap",
+                  opacity: newSetName.trim() ? 1 : 0.4,
+                }}>+ Create</button>
+            </div>
           </div>
 
         </div>

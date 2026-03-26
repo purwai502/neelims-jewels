@@ -16,6 +16,7 @@ class ProductUpdate(BaseModel):
     cost_price:     Optional[float] = None
     vendor_id:      Optional[UUID]  = None
     order_id:       Optional[UUID]  = None
+    set_id:         Optional[UUID]  = None
     stones:         Optional[List[ProductStoneCreate]] = []
 
 class ProductCreate(BaseModel):
@@ -51,6 +52,7 @@ class ProductOut(BaseModel):
     image_path:         Optional[str] = None
     is_sold:            bool = False
     sold_to_client_id:  Optional[UUID] = None
+    set_id:             Optional[UUID] = None
     stones:             Optional[List[ProductStoneOut]] = []
 
     class Config:

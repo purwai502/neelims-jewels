@@ -16,7 +16,8 @@ from routers import (
     buybacks_router,
     staff_router,
     reports_router,
-    accounts_router
+    accounts_router,
+    sets_router
 )
 import models  # ensures all models are registered with Base before create_all
 from database import engine, Base
@@ -33,6 +34,16 @@ def run_migrations():
             ))
             conn.execute(text(
                 "ALTER TABLE users ALTER COLUMN email DROP NOT NULL"
+            ))
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS product_sets (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    name VARCHAR(255) NOT NULL UNIQUE,
+                    created_at TIMESTAMPTZ DEFAULT now()
+                )
+            """))
+            conn.execute(text(
+                "ALTER TABLE products ADD COLUMN IF NOT EXISTS set_id UUID REFERENCES product_sets(id)"
             ))
             conn.commit()
     except Exception as e:
@@ -74,6 +85,7 @@ app.include_router(buybacks_router)
 app.include_router(accounts_router)
 app.include_router(staff_router)
 app.include_router(reports_router)
+app.include_router(sets_router)
 @app.get("/")
 def root():
     return {"status": "Neelima Jwels API is running"}
