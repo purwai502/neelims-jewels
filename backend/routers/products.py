@@ -47,6 +47,7 @@ def create_product(
         name               = product_data.name,
         description        = product_data.description,
         weight             = product_data.weight,
+        gold_weight        = product_data.gold_weight,
         purity             = product_data.purity,
         category           = product_data.category,
         sub_category       = product_data.sub_category,
@@ -56,6 +57,7 @@ def create_product(
         cost_price         = product_data.cost_price,
         vendor_id          = product_data.vendor_id,
         order_id           = product_data.order_id,
+        set_id             = product_data.set_id,
         barcode            = barcode,
         created_by         = current_user.id
     )

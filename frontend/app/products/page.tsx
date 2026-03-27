@@ -40,6 +40,7 @@ export default function ProductsPage() {
   const router = useRouter();
   const [products,          setProducts]          = useState<Product[]>([]);
   const [sets,              setSets]              = useState<ProductSet[]>([]);
+  const [carouselIdx,       setCarouselIdx]       = useState<Record<string, number>>({});
   const [loading,           setLoading]           = useState(true);
   const [search,            setSearch]            = useState("");
   const [statusFilter,      setStatusFilter]      = useState<"all" | "available" | "sold">("all");
@@ -219,11 +220,11 @@ export default function ProductsPage() {
           No products found.
         </p>
       ) : (() => {
-        const setIds    = [...new Set(filtered.filter(p => p.set_id).map(p => p.set_id!))];
+        const setIds     = [...new Set(filtered.filter(p => p.set_id).map(p => p.set_id!))];
         const standalone = filtered.filter(p => !p.set_id);
 
         const ProductCard = ({ product }: { product: Product }) => (
-          <Link key={product.id} href={`/products/${product.id}`} style={{ textDecoration: "none" }}>
+          <Link href={`/products/${product.id}`} style={{ textDecoration: "none" }}>
             <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", cursor: "pointer", transition: "all 0.3s ease", position: "relative", overflow: "hidden" }}
               onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = "var(--gold)"; el.style.transform = "translateY(-3px)"; el.style.boxShadow = "var(--shadow-gold)"; }}
               onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = "var(--border)"; el.style.transform = "translateY(0)"; el.style.boxShadow = "none"; }}>
@@ -263,46 +264,70 @@ export default function ProductsPage() {
           </Link>
         );
 
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: "36px" }}>
-            {setIds.map(sid => {
-              const setInfo  = sets.find(s => s.id === sid);
-              const pieces   = filtered.filter(p => p.set_id === sid);
-              const allSold  = pieces.every(p => p.is_sold);
-              const combined = pieces.reduce((sum, p) => sum + Number(p.total_price || 0), 0);
-              return (
-                <div key={sid}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
-                    <span style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)", fontFamily: "'Didact Gothic', sans-serif", whiteSpace: "nowrap" }}>
-                      ✦ {setInfo?.name ?? "Unnamed Set"}
-                    </span>
-                    <span style={{ fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase", padding: "2px 8px", border: `1px solid ${allSold ? "rgba(92,184,122,0.4)" : "rgba(201,168,76,0.4)"}`, color: allSold ? "#5CB87A" : "var(--gold)", fontFamily: "'Didact Gothic', sans-serif", whiteSpace: "nowrap" }}>
-                      {allSold ? "Sold" : "Available"} · {pieces.length} piece{pieces.length !== 1 ? "s" : ""}
-                    </span>
-                    <div style={{ flex: 1, height: "1px", background: "var(--border-gold)", opacity: 0.4 }} />
-                    <span style={{ fontSize: "12px", color: "var(--text-muted)", fontFamily: "'Playfair Display', serif", fontStyle: "italic", whiteSpace: "nowrap" }}>
-                      Combined ₹{combined.toLocaleString("en-IN")}
-                    </span>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
-                    {pieces.map(p => <ProductCard key={p.id} product={p} />)}
-                  </div>
-                </div>
-              );
-            })}
+        const SetCard = ({ sid }: { sid: string }) => {
+          const setInfo  = sets.find(s => s.id === sid);
+          const pieces   = filtered.filter(p => p.set_id === sid);
+          const allSold  = pieces.every(p => p.is_sold);
+          const combined = pieces.reduce((sum, p) => sum + Number(p.total_price || 0), 0);
+          const idx      = carouselIdx[sid] ?? 0;
+          const current  = pieces[idx];
+          const prev = (e: React.MouseEvent) => { e.preventDefault(); setCarouselIdx(c => ({ ...c, [sid]: (idx - 1 + pieces.length) % pieces.length })); };
+          const next = (e: React.MouseEvent) => { e.preventDefault(); setCarouselIdx(c => ({ ...c, [sid]: (idx + 1) % pieces.length })); };
 
-            {standalone.length > 0 && (
-              <div>
-                {setIds.length > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
-                    <span style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-muted)", fontFamily: "'Didact Gothic', sans-serif", whiteSpace: "nowrap" }}>Individual Pieces</span>
-                    <div style={{ flex: 1, height: "1px", background: "var(--border)", opacity: 0.4 }} />
-                  </div>
-                )}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
-                  {standalone.map(p => <ProductCard key={p.id} product={p} />)}
+          return (
+            <div style={{ background: "var(--bg-card)", border: "1px solid var(--border-gold)", position: "relative", overflow: "hidden" }}>
+              {/* Carousel image */}
+              <Link href={`/products/${current.id}`} style={{ textDecoration: "none", display: "block" }}>
+                <div style={{ height: "180px", background: "var(--surface)", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                  {current.image_path ? (
+                    <img src={`${process.env.NEXT_PUBLIC_API_URL}/${current.image_path}`} alt={current.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                  ) : (
+                    <span style={{ color: "var(--gold)", fontSize: "32px", opacity: 0.2 }}>◇</span>
+                  )}
+                  {/* Arrows */}
+                  {pieces.length > 1 && (
+                    <>
+                      <button onClick={prev} style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.45)", border: "none", color: "#fff", width: "28px", height: "28px", cursor: "pointer", fontSize: "14px", display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>
+                      <button onClick={next} style={{ position: "absolute", right: "6px", top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.45)", border: "none", color: "#fff", width: "28px", height: "28px", cursor: "pointer", fontSize: "14px", display: "flex", alignItems: "center", justifyContent: "center" }}>›</button>
+                      <div style={{ position: "absolute", bottom: "6px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "4px" }}>
+                        {pieces.map((_, i) => (
+                          <div key={i} style={{ width: "5px", height: "5px", borderRadius: "50%", background: i === idx ? "var(--gold)" : "rgba(255,255,255,0.4)" }} />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </Link>
+              {/* Footer */}
+              <div style={{ padding: "14px 16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                  <p style={{ fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)", fontFamily: "'Didact Gothic', sans-serif", margin: 0 }}>✦ Set</p>
+                  <span style={{ fontSize: "7px", letterSpacing: "0.12em", textTransform: "uppercase", padding: "2px 6px", border: `1px solid ${allSold ? "rgba(92,184,122,0.4)" : "rgba(201,168,76,0.4)"}`, color: allSold ? "#5CB87A" : "var(--gold)", fontFamily: "'Didact Gothic', sans-serif" }}>{allSold ? "Sold" : "Available"}</span>
+                </div>
+                <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "16px", fontWeight: 400, color: "var(--text-primary)", marginBottom: "4px" }}>{setInfo?.name ?? "Unnamed Set"}</h3>
+                <p style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "'Cormorant', serif", fontStyle: "italic", marginBottom: "10px" }}>{current.name} · {pieces.length} pieces</p>
+                <div style={{ borderTop: "1px solid var(--border-gold)", paddingTop: "10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <p style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)" }}>Combined</p>
+                  <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "16px", fontWeight: 600, color: "var(--gold)" }}>₹{combined.toLocaleString("en-IN")}</p>
                 </div>
               </div>
+            </div>
+          );
+        };
+
+        // Flatten sets and standalone into one grid
+        type GridItem = { type: "set"; sid: string } | { type: "product"; product: Product };
+        const gridItems: GridItem[] = [
+          ...setIds.map(sid => ({ type: "set" as const, sid })),
+          ...standalone.map(p => ({ type: "product" as const, product: p })),
+        ];
+
+        return (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+            {gridItems.map(item =>
+              item.type === "set"
+                ? <SetCard key={item.sid} sid={item.sid} />
+                : <ProductCard key={item.product.id} product={item.product} />
             )}
           </div>
         );

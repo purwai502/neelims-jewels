@@ -23,6 +23,7 @@ class ProductCreate(BaseModel):
     name:           str
     description:    Optional[str]   = None
     weight:         float
+    gold_weight:    Optional[float] = None
     purity:         Optional[str]   = None
     category:       Optional[str]   = None
     sub_category:   Optional[str]   = None
@@ -31,6 +32,7 @@ class ProductCreate(BaseModel):
     cost_price:     Optional[float] = None
     vendor_id:      Optional[UUID]  = None
     order_id:       Optional[UUID]  = None
+    set_id:         Optional[UUID]  = None
     stones:         Optional[List[ProductStoneCreate]] = []
 
 class ProductOut(BaseModel):
