@@ -21,7 +21,7 @@ interface StoneRow {
 const METAL_TYPES    = ["Gold", "Silver", "Platinum", "Other"];
 const GOLD_PURITIES  = ["24K", "22K", "18K", "14K"];
 const CATEGORIES     = ["Jewellery", "Art", "Other"];
-const SUB_CATEGORIES = ["Ring", "Earring", "Neck Piece", "Bracelet", "Sets", "Pendants", "Diamonds", "Raw", "Accessories", "Other"];
+const SUB_CATEGORIES = ["Ring", "Earring", "Neck Piece", "Bracelet", "Sets", "Pendants", "Diamonds", "Gold", "Raw", "Accessories", "Other"];
 
 const fmt = (n: number) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -142,8 +142,9 @@ export default function EditProductPage() {
   const costing     = goldValue + stonesTotal;
   const autoFinal   = costing + (parseFloat(makingCharges) || 0);
 
-  // auto-fill making charges as 20% of gold value for Jewellery
-  const autoMaking = category === "Jewellery" && goldValue > 0 ? goldValue * 0.20 : null;
+  // auto-fill making charges: 30% for Gold sub-category, 20% for all other Jewellery
+  const makingPct  = subCategory === "Gold" ? 0.30 : 0.20;
+  const autoMaking = category === "Jewellery" && goldValue > 0 ? goldValue * makingPct : null;
 
   useEffect(() => {
     if (autoMaking !== null) {
@@ -556,7 +557,7 @@ export default function EditProductPage() {
           <div style={{ padding: "14px 20px", borderRight: "1px solid var(--border)" }}>
             <p style={{ fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>Labour / Making Charges</p>
             <p style={{ fontSize: "10px", color: "var(--text-muted)", fontStyle: "italic" }}>
-              {autoMaking !== null ? "Auto: 20% of gold value · edit to override" : "Enter manually"}
+              {autoMaking !== null ? `Auto: ${makingPct * 100}% of gold value · edit to override` : "Enter manually"}
             </p>
           </div>
           <div style={{ padding: "10px 16px" }}>
