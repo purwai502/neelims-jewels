@@ -98,24 +98,27 @@ def get_vendor_balance(
         raise HTTPException(status_code=404, detail="Vendor not found")
 
     from sqlalchemy import text
-    row = db.execute(text("""
-        SELECT
-            COALESCE(SUM(pr.cost_price), 0)::float                       AS total_goods_received,
-            COALESCE(ab.balance, 0)::float                               AS total_paid,
-            (COALESCE(SUM(pr.cost_price), 0) - COALESCE(ab.balance, 0))::float AS balance_due
-        FROM vendors v
-        LEFT JOIN products pr ON pr.vendor_id = v.id AND pr.cost_price IS NOT NULL
-        LEFT JOIN account_balances ab ON ab.account_id = v.account_id
-        WHERE v.id = :vendor_id
-        GROUP BY ab.balance
-    """), {"vendor_id": vendor_id}).fetchone()
+
+    total_goods_received = db.execute(text("""
+        SELECT COALESCE(SUM(cost_price), 0)
+        FROM products
+        WHERE vendor_id = :vendor_id AND cost_price IS NOT NULL
+    """), {"vendor_id": vendor_id}).scalar()
+
+    total_paid = db.execute(text("""
+        SELECT COALESCE(SUM(amount), 0)
+        FROM payments
+        WHERE account_id = :aid
+    """), {"aid": str(vendor.account_id)}).scalar()
+
+    balance_due = float(total_goods_received) - float(total_paid)
 
     return {
         "vendor_id":            vendor_id,
         "vendor_name":          vendor.business_name,
-        "total_goods_received": float(row[0]) if row else 0.0,
-        "total_paid":           float(row[1]) if row else 0.0,
-        "balance_due":          float(row[2]) if row else 0.0,
+        "total_goods_received": float(total_goods_received),
+        "total_paid":           float(total_paid),
+        "balance_due":          balance_due,
     }
 
 

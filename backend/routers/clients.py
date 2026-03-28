@@ -3,13 +3,22 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.client import Client
 from models.account import Account
+from models.transaction import Transaction
+from models.payment import Payment
 from schemas.client import ClientCreate, ClientOut
 from routers.users import get_current_user, require_manager_or_above
 from models.user import User
 from typing import List
 from sqlalchemy import text
+from pydantic import BaseModel
+from typing import Optional
 
 router = APIRouter(prefix="/clients", tags=["Clients"])
+
+class ClientPayRequest(BaseModel):
+    amount: float
+    payment_method: str  # CASH, BANK, UPI, CHEQUE
+    notes: Optional[str] = None
 
 @router.post("/", response_model=ClientOut)
 def create_client(
@@ -17,16 +26,14 @@ def create_client(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # create account for client first
     account = Account(
         name         = client_data.full_name,
         account_type = "CLIENT",
         created_by   = current_user.id
     )
     db.add(account)
-    db.flush()  # gets the account id without committing
+    db.flush()
 
-    # create client linked to that account
     client = Client(
         account_id = account.id,
         full_name  = client_data.full_name,
@@ -84,18 +91,118 @@ def update_client(
 def get_client_balance(
     client_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager_or_above)
+    current_user: User = Depends(get_current_user)
 ):
     client = db.query(Client).filter(Client.id == client_id).first()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
 
-    result = db.execute(
-        text(f"SELECT balance FROM account_balances WHERE account_id = '{client.account_id}'")
-    ).fetchone()
+    total_billed = db.execute(text("""
+        SELECT COALESCE(SUM(total_price), 0)
+        FROM products
+        WHERE sold_to_client_id = :cid AND is_sold = true
+    """), {"cid": client_id}).scalar()
+
+    total_paid = db.execute(text("""
+        SELECT COALESCE(SUM(amount), 0)
+        FROM payments
+        WHERE account_id = :aid
+    """), {"aid": str(client.account_id)}).scalar()
+
+    balance_due = float(total_billed) - float(total_paid)
 
     return {
-        "client_id":   client_id,
-        "client_name": client.full_name,
-        "balance":     float(result[0]) if result else 0.0
+        "client_id":    client_id,
+        "client_name":  client.full_name,
+        "total_billed": float(total_billed),
+        "total_paid":   float(total_paid),
+        "balance_due":  balance_due,
     }
+
+@router.get("/{client_id}/sold-products")
+def get_client_sold_products(
+    client_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    rows = db.execute(text("""
+        SELECT id, barcode, name, total_price, created_at
+        FROM products
+        WHERE sold_to_client_id = :cid AND is_sold = true
+        ORDER BY created_at DESC
+    """), {"cid": client_id}).fetchall()
+
+    return [dict(r._mapping) for r in rows]
+
+@router.get("/{client_id}/payments")
+def get_client_payments(
+    client_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    rows = db.execute(text("""
+        SELECT id, amount, payment_method, notes, created_at
+        FROM payments
+        WHERE account_id = :aid
+        ORDER BY created_at DESC
+    """), {"aid": str(client.account_id)}).fetchall()
+
+    return [dict(r._mapping) for r in rows]
+
+@router.post("/{client_id}/pay")
+def record_client_payment(
+    client_id: str,
+    body: ClientPayRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    valid_methods = ["CASH", "BANK", "UPI", "CHEQUE"]
+    if body.payment_method not in valid_methods:
+        raise HTTPException(status_code=400, detail=f"Invalid method. Use: {valid_methods}")
+
+    business_account = db.query(Account)\
+        .filter(Account.account_type == "BUSINESS")\
+        .filter(Account.name == "Studio Account")\
+        .first()
+    if not business_account:
+        # create it if missing
+        business_account = Account(name="Studio Account", account_type="BUSINESS")
+        db.add(business_account)
+        db.flush()
+
+    transaction = Transaction(
+        debit_account_id  = client.account_id,
+        credit_account_id = business_account.id,
+        amount            = body.amount,
+        reference_type    = "PAYMENT",
+        notes             = body.notes or f"Payment via {body.payment_method}",
+        created_by        = current_user.id
+    )
+    db.add(transaction)
+    db.flush()
+
+    payment = Payment(
+        account_id     = client.account_id,
+        amount         = body.amount,
+        payment_method = body.payment_method,
+        transaction_id = transaction.id,
+        notes          = body.notes or f"Payment via {body.payment_method}",
+        created_by     = current_user.id
+    )
+    db.add(payment)
+    db.commit()
+    db.refresh(payment)
+
+    return {"detail": "Payment recorded", "payment_id": str(payment.id), "amount": body.amount}
