@@ -30,7 +30,13 @@ export default function NewClientPage() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          full_name: form.full_name,
+          phone:     form.phone   || null,
+          email:     form.email   || null,
+          address:   form.address || null,
+          notes:     form.notes   || null,
+        }),
       });
       if (!res.ok) throw new Error("Failed");
       router.push("/clients");
@@ -79,7 +85,7 @@ export default function NewClientPage() {
         </div>
 
         <div style={{ marginBottom: "24px" }}>
-          <p className="label-caps" style={{ marginBottom: "10px" }}>Phone</p>
+          <p className="label-caps" style={{ marginBottom: "10px" }}>Phone (optional)</p>
           <input
             type="text"
             placeholder="Mobile number"
@@ -90,7 +96,7 @@ export default function NewClientPage() {
         </div>
 
         <div style={{ marginBottom: "24px" }}>
-          <p className="label-caps" style={{ marginBottom: "10px" }}>Email</p>
+          <p className="label-caps" style={{ marginBottom: "10px" }}>Email (optional)</p>
           <input
             type="email"
             placeholder="Email address"
@@ -101,7 +107,7 @@ export default function NewClientPage() {
         </div>
 
         <div style={{ marginBottom: "24px" }}>
-          <p className="label-caps" style={{ marginBottom: "10px" }}>Address</p>
+          <p className="label-caps" style={{ marginBottom: "10px" }}>Address (optional)</p>
           <textarea
             placeholder="Full address"
             value={form.address}
@@ -112,7 +118,7 @@ export default function NewClientPage() {
         </div>
 
         <div style={{ marginBottom: "32px" }}>
-          <p className="label-caps" style={{ marginBottom: "10px" }}>Notes</p>
+          <p className="label-caps" style={{ marginBottom: "10px" }}>Notes (optional)</p>
           <textarea
             placeholder="Any additional notes about this client"
             value={form.notes}
