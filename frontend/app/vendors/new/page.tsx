@@ -18,12 +18,12 @@ export default function NewVendorPage() {
   const [form, setForm] = useState({
     business_name:  "",
     contact_person: "",
-    phone:          "",
     email:          "",
     address:        "",
     vendor_type:    "",
     notes:          "",
   });
+  const [phones, setPhones] = useState<string[]>([""]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -44,7 +44,7 @@ export default function NewVendorPage() {
       const body = {
         business_name:  form.business_name,
         contact_person: form.contact_person || null,
-        phone:          form.phone || null,
+        phone:          phones.filter(p => p.trim()).join(", ") || null,
         email:          form.email || null,
         address:        form.address || null,
         notes:          form.vendor_type
@@ -132,14 +132,31 @@ export default function NewVendorPage() {
         </div>
 
         <div style={{ marginBottom: "24px" }}>
-          <p className="label-caps" style={{ marginBottom: "10px" }}>Phone</p>
-          <input
-            type="text"
-            placeholder="Mobile or office number"
-            value={form.phone}
-            onChange={(e) => update("phone", e.target.value)}
-            className="input-luxury"
-          />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+            <p className="label-caps">Phone</p>
+            <button type="button" onClick={() => setPhones(prev => [...prev, ""])}
+              style={{ background: "transparent", border: "1px solid var(--gold)", color: "var(--gold)", padding: "4px 12px", fontSize: "10px", letterSpacing: "0.08em", cursor: "pointer", fontFamily: "'Didact Gothic', sans-serif" }}>
+              + Add Number
+            </button>
+          </div>
+          {phones.map((ph, i) => (
+            <div key={i} style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
+              <input
+                type="text"
+                placeholder={i === 0 ? "Primary number" : "Additional number"}
+                value={ph}
+                onChange={e => setPhones(prev => prev.map((p, j) => j === i ? e.target.value : p))}
+                className="input-luxury"
+                style={{ flex: 1 }}
+              />
+              {phones.length > 1 && (
+                <button type="button" onClick={() => setPhones(prev => prev.filter((_, j) => j !== i))}
+                  style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", padding: "8px 12px", cursor: "pointer", fontSize: "14px" }}>
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
         </div>
 
         <div style={{ marginBottom: "24px" }}>

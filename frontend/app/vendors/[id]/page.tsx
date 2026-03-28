@@ -229,7 +229,6 @@ export default function VendorDetailPage() {
 
         {[
           { label: "Contact", value: vendor.contact_person },
-          { label: "Phone",   value: vendor.phone          },
           { label: "Email",   value: vendor.email          },
           { label: "Address", value: vendor.address        },
           { label: "Notes",   value: cleanNotes            },
@@ -251,6 +250,23 @@ export default function VendorDetailPage() {
             }}>{value || "Not provided"}</p>
           </div>
         ))}
+
+        {/* Phone numbers */}
+        <div style={{ display: "flex", gap: "24px", paddingBottom: "16px", marginBottom: "16px", borderBottom: "1px solid var(--border-light)" }}>
+          <p style={{ fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)", width: "80px", flexShrink: 0, paddingTop: "2px" }}>
+            Phone
+          </p>
+          <div>
+            {vendor.phone
+              ? vendor.phone.split(",").map((ph, i) => (
+                  <p key={i} style={{ fontSize: "14px", color: "var(--text-primary)", lineHeight: 1.8 }}>
+                    {ph.trim()}
+                  </p>
+                ))
+              : <p style={{ fontSize: "14px", color: "var(--text-muted)", fontStyle: "italic" }}>Not provided</p>
+            }
+          </div>
+        </div>
       </div>
 
     </div>
