@@ -63,13 +63,15 @@ def process_buyback(product_id: str, client_id: str, db: Session, processed_by: 
     if not client:
         raise Exception("Client not found")
 
-    # get business account
+    # get business account (auto-create if missing)
     business_account = db.query(Account)\
         .filter(Account.account_type == "BUSINESS")\
         .filter(Account.name == "Studio Account")\
         .first()
     if not business_account:
-        raise Exception("Business account not found")
+        business_account = Account(name="Studio Account", account_type="BUSINESS")
+        db.add(business_account)
+        db.flush()
 
     # get the product
     product = db.query(Product).filter(Product.id == product_id).first()
