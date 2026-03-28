@@ -11,6 +11,9 @@ interface Vendor {
   email: string | null;
   address: string | null;
   notes: string | null;
+  gst_number: string | null;
+  tin_number: string | null;
+  pan_number: string | null;
 }
 
 interface VendorBalance {
@@ -231,6 +234,9 @@ export default function VendorDetailPage() {
           { label: "Contact", value: vendor.contact_person },
           { label: "Email",   value: vendor.email          },
           { label: "Address", value: vendor.address        },
+          { label: "GST",     value: vendor.gst_number     },
+          { label: "TIN",     value: vendor.tin_number     },
+          { label: "PAN",     value: vendor.pan_number     },
           { label: "Notes",   value: cleanNotes            },
         ].map(({ label, value }) => (
           <div key={label} style={{

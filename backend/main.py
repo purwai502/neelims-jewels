@@ -45,6 +45,15 @@ def run_migrations():
             conn.execute(text(
                 "ALTER TABLE products ADD COLUMN IF NOT EXISTS set_id UUID REFERENCES product_sets(id)"
             ))
+            conn.execute(text(
+                "ALTER TABLE vendors ADD COLUMN IF NOT EXISTS gst_number VARCHAR(50)"
+            ))
+            conn.execute(text(
+                "ALTER TABLE vendors ADD COLUMN IF NOT EXISTS tin_number VARCHAR(50)"
+            ))
+            conn.execute(text(
+                "ALTER TABLE vendors ADD COLUMN IF NOT EXISTS pan_number VARCHAR(50)"
+            ))
             conn.commit()
     except Exception as e:
         print(f"[migration] skipped: {e}")

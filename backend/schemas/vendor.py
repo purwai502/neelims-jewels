@@ -9,6 +9,9 @@ class VendorCreate(BaseModel):
     email: Optional[EmailStr] = None
     address: Optional[str] = None
     notes: Optional[str] = None
+    gst_number: Optional[str] = None
+    tin_number: Optional[str] = None
+    pan_number: Optional[str] = None
 
 class VendorOut(BaseModel):
     id: UUID
@@ -19,6 +22,9 @@ class VendorOut(BaseModel):
     email: Optional[str]
     address: Optional[str]
     notes: Optional[str]
+    gst_number: Optional[str]
+    tin_number: Optional[str]
+    pan_number: Optional[str]
 
     class Config:
         from_attributes = True

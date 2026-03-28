@@ -22,6 +22,9 @@ export default function NewVendorPage() {
     address:        "",
     vendor_type:    "",
     notes:          "",
+    gst_number:     "",
+    tin_number:     "",
+    pan_number:     "",
   });
   const [phones, setPhones] = useState<string[]>([""]);
 
@@ -50,6 +53,9 @@ export default function NewVendorPage() {
         notes:          form.vendor_type
           ? `[${form.vendor_type}]${form.notes ? " " + form.notes : ""}`
           : form.notes || null,
+        gst_number:     form.gst_number || null,
+        tin_number:     form.tin_number || null,
+        pan_number:     form.pan_number || null,
       };
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendors/`, {
         method: "POST",
@@ -179,6 +185,24 @@ export default function NewVendorPage() {
             className="input-luxury"
             style={{ minHeight: "80px", resize: "vertical" }}
           />
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "24px" }}>
+          <div>
+            <p className="label-caps" style={{ marginBottom: "10px" }}>GST Number</p>
+            <input type="text" placeholder="e.g. 22ABCDE1234F1Z5" value={form.gst_number}
+              onChange={e => update("gst_number", e.target.value)} className="input-luxury" />
+          </div>
+          <div>
+            <p className="label-caps" style={{ marginBottom: "10px" }}>TIN Number</p>
+            <input type="text" placeholder="Tax Identification No." value={form.tin_number}
+              onChange={e => update("tin_number", e.target.value)} className="input-luxury" />
+          </div>
+          <div>
+            <p className="label-caps" style={{ marginBottom: "10px" }}>PAN Number</p>
+            <input type="text" placeholder="e.g. ABCDE1234F" value={form.pan_number}
+              onChange={e => update("pan_number", e.target.value)} className="input-luxury" />
+          </div>
         </div>
 
         <div style={{ marginBottom: "32px" }}>

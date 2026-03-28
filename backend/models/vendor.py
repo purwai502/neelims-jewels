@@ -15,6 +15,9 @@ class Vendor(Base):
     email          = Column(String(255), nullable=True)
     address        = Column(String, nullable=True)
     notes          = Column(String, nullable=True)
+    gst_number     = Column(String(50), nullable=True)
+    tin_number     = Column(String(50), nullable=True)
+    pan_number     = Column(String(50), nullable=True)
     created_by     = Column(UUID(as_uuid=True), nullable=True)
     created_at     = Column(String, server_default=func.now())
     

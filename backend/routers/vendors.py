@@ -34,6 +34,9 @@ def create_vendor(
         email          = vendor_data.email,
         address        = vendor_data.address,
         notes          = vendor_data.notes,
+        gst_number     = vendor_data.gst_number,
+        tin_number     = vendor_data.tin_number,
+        pan_number     = vendor_data.pan_number,
         created_by     = current_user.id
     )
     db.add(vendor)
@@ -76,6 +79,9 @@ def update_vendor(
     vendor.email          = vendor_data.email
     vendor.address        = vendor_data.address
     vendor.notes          = vendor_data.notes
+    vendor.gst_number     = vendor_data.gst_number
+    vendor.tin_number     = vendor_data.tin_number
+    vendor.pan_number     = vendor_data.pan_number
 
     db.commit()
     db.refresh(vendor)
