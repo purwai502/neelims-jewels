@@ -55,6 +55,14 @@ export default function ClientDetailPage() {
   const [paying,    setPaying]    = useState(false);
   const [payError,  setPayError]  = useState("");
 
+  // edit/delete payment state
+  const [editingId,     setEditingId]     = useState<string | null>(null);
+  const [editAmount,    setEditAmount]    = useState("");
+  const [editMethod,    setEditMethod]    = useState("CASH");
+  const [editNotes,     setEditNotes]     = useState("");
+  const [editSaving,    setEditSaving]    = useState(false);
+  const [deletingId,    setDeletingId]    = useState<string | null>(null);
+
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const h = { "Authorization": `Bearer ${token}` };
 
@@ -88,6 +96,44 @@ export default function ClientDetailPage() {
 
     fetchBalance();
   }, [id, router]);
+
+  const startEdit = (p: ClientPayment) => {
+    setEditingId(p.id);
+    setEditAmount(String(p.amount));
+    setEditMethod(p.payment_method);
+    setEditNotes(p.notes || "");
+  };
+
+  const handleEditSave = async () => {
+    if (!editingId) return;
+    const amount = parseFloat(editAmount);
+    if (!amount || amount <= 0) return;
+    setEditSaving(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payments/${editingId}`, {
+        method: "PATCH",
+        headers: { ...h, "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, payment_method: editMethod, notes: editNotes || null }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setEditingId(null);
+      await fetchBalance();
+    } catch { /* silent */ }
+    setEditSaving(false);
+  };
+
+  const handleDelete = async (paymentId: string) => {
+    setDeletingId(paymentId);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payments/${paymentId}`, {
+        method: "DELETE",
+        headers: h,
+      });
+      if (!res.ok) throw new Error("Failed");
+      await fetchBalance();
+    } catch { /* silent */ }
+    setDeletingId(null);
+  };
 
   const handlePay = async (amount: number) => {
     if (!amount || amount <= 0) { setPayError("Enter a valid amount"); return; }
@@ -251,17 +297,55 @@ export default function ClientDetailPage() {
             <p className="label-caps" style={{ fontSize: "9px" }}>Payment History</p>
           </div>
           {payments.map(p => (
-            <div key={p.id} style={{ display: "grid", gridTemplateColumns: "1fr 120px 120px", borderBottom: "1px solid var(--border)" }}>
-              <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{p.notes || "Payment"}</p>
-                <p style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "2px" }}>{new Date(p.created_at).toLocaleDateString("en-IN")}</p>
-              </div>
-              <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
-                <p style={{ fontSize: "11px", letterSpacing: "0.06em", color: "var(--text-muted)", textTransform: "uppercase" }}>{p.payment_method}</p>
-              </div>
-              <div style={{ padding: "10px 14px" }}>
-                <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "13px", color: "#5CB87A" }}>₹{fmt(p.amount)}</p>
-              </div>
+            <div key={p.id} style={{ borderBottom: "1px solid var(--border)" }}>
+              {editingId === p.id ? (
+                /* ── inline edit form ── */
+                <div style={{ padding: "12px 14px", background: "rgba(201,168,76,0.04)" }}>
+                  <div style={{ display: "flex", gap: "8px", marginBottom: "10px", flexWrap: "wrap" }}>
+                    {METHODS.map(m => (
+                      <button key={m} onClick={() => setEditMethod(m)} style={{
+                        padding: "6px 12px", fontSize: "10px", letterSpacing: "0.06em",
+                        border: `1px solid ${editMethod === m ? "var(--gold)" : "var(--border)"}`,
+                        background: editMethod === m ? "var(--gold-subtle)" : "transparent",
+                        color: editMethod === m ? "var(--gold)" : "var(--text-muted)",
+                        cursor: "pointer", fontFamily: "'Didact Gothic', sans-serif",
+                      }}>{m}</button>
+                    ))}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                    <input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)}
+                      placeholder="Amount" style={{ padding: "8px 12px", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-primary)", fontFamily: "'Playfair Display', serif", fontSize: "14px", outline: "none" }} />
+                    <input type="text" value={editNotes} onChange={e => setEditNotes(e.target.value)}
+                      placeholder="Notes" style={{ padding: "8px 12px", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-primary)", fontFamily: "'Didact Gothic', sans-serif", fontSize: "13px", outline: "none" }} />
+                  </div>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button onClick={handleEditSave} disabled={editSaving} style={{ padding: "7px 18px", background: "var(--gold)", border: "none", color: "#000", fontSize: "10px", letterSpacing: "0.08em", cursor: editSaving ? "not-allowed" : "pointer", opacity: editSaving ? 0.6 : 1, fontFamily: "'Didact Gothic', sans-serif" }}>
+                      {editSaving ? "Saving…" : "Save"}
+                    </button>
+                    <button onClick={() => setEditingId(null)} style={{ padding: "7px 18px", background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", fontSize: "10px", letterSpacing: "0.08em", cursor: "pointer", fontFamily: "'Didact Gothic', sans-serif" }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* ── normal row ── */
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 110px 120px 72px" }}>
+                  <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
+                    <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{p.notes || "Payment"}</p>
+                    <p style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "2px" }}>{new Date(p.created_at).toLocaleDateString("en-IN")}</p>
+                  </div>
+                  <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
+                    <p style={{ fontSize: "11px", letterSpacing: "0.06em", color: "var(--text-muted)", textTransform: "uppercase" }}>{p.payment_method}</p>
+                  </div>
+                  <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
+                    <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "13px", color: "#5CB87A" }}>₹{fmt(p.amount)}</p>
+                  </div>
+                  <div style={{ padding: "10px 10px", display: "flex", gap: "6px", alignItems: "center" }}>
+                    <button onClick={() => startEdit(p)} title="Edit" style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--gold)", fontSize: "13px", padding: "2px 4px" }}>✎</button>
+                    <button onClick={() => handleDelete(p.id)} disabled={deletingId === p.id} title="Delete" style={{ background: "transparent", border: "none", cursor: deletingId === p.id ? "not-allowed" : "pointer", color: "#E05C7A", fontSize: "14px", padding: "2px 4px", opacity: deletingId === p.id ? 0.5 : 1 }}>✕</button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -83,6 +83,11 @@ def update_payment(
         payment.amount = update_data["amount"]
     if "notes" in update_data:
         payment.notes = update_data["notes"]
+    if "payment_method" in update_data:
+        valid_methods = ["CASH", "BANK", "UPI", "CHEQUE"]
+        if update_data["payment_method"] not in valid_methods:
+            raise HTTPException(status_code=400, detail=f"Invalid method. Use: {valid_methods}")
+        payment.payment_method = update_data["payment_method"]
 
     if payment.transaction_id:
         transaction = db.query(Transaction)\
@@ -97,6 +102,29 @@ def update_payment(
     db.commit()
     db.refresh(payment)
     return payment
+
+
+@router.delete("/{payment_id}")
+def delete_payment(
+    payment_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_or_above)
+):
+    payment = db.query(Payment).filter(Payment.id == payment_id).first()
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+
+    # also delete the linked transaction
+    if payment.transaction_id:
+        transaction = db.query(Transaction)\
+            .filter(Transaction.id == payment.transaction_id)\
+            .first()
+        if transaction:
+            db.delete(transaction)
+
+    db.delete(payment)
+    db.commit()
+    return {"detail": "Payment deleted"}
 
 @router.get("/", response_model=List[PaymentOut])
 def get_all_payments(
