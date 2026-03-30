@@ -39,9 +39,15 @@ export default function DashboardPage() {
     weekday: "long", year: "numeric", month: "long", day: "numeric"
   });
 
+  const [userName, setUserName] = useState("");
+
+  useEffect(() => {
+    const full = localStorage.getItem("name") || "";
+    setUserName(full.split(" ")[0]);
+  }, []);
+
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
-  const userName = typeof window !== "undefined" ? (localStorage.getItem("name") || "Purwai") : "Purwai";
 
   const handleSaveRate = async () => {
     if (!goldRate) return;
