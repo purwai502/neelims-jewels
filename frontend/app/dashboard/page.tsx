@@ -41,6 +41,7 @@ export default function DashboardPage() {
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
+  const userName = typeof window !== "undefined" ? (localStorage.getItem("name") || "Purwai") : "Purwai";
 
   const handleSaveRate = async () => {
     if (!goldRate) return;
@@ -87,7 +88,7 @@ export default function DashboardPage() {
           marginBottom: "12px",
         }}>
           {greeting},<br/>
-          <em style={{ fontWeight: 700, color: "var(--gold)" }}>Purwai.</em>
+          <em style={{ fontWeight: 700, color: "var(--gold)" }}>{userName}.</em>
         </h1>
         <p style={{
           fontFamily: "'Didact Gothic', sans-serif",
