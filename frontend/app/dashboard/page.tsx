@@ -42,8 +42,7 @@ export default function DashboardPage() {
   const [userName, setUserName] = useState("");
 
   useEffect(() => {
-    const full = localStorage.getItem("name") || "";
-    setUserName(full.split(" ")[0]);
+    setUserName(localStorage.getItem("username") || localStorage.getItem("name") || "");
   }, []);
 
   const hour = new Date().getHours();
