@@ -160,23 +160,24 @@ export default function ProductDetailPage() {
   );
   if (!product) return <p style={{ color: "#E05C7A" }}>Product not found.</p>;
 
+  const metalMatch    = product.description?.match(/^\[(.+?)\]/);
+  const metalType     = metalMatch ? metalMatch[1] : "Gold";
+  const cleanDesc     = product.description?.replace(/^\[.+?\]\s*/, "") || "";
+
   const purityKey     = product.purity?.includes("24") ? "24K"
                       : product.purity?.includes("22") ? "22K"
                       : product.purity?.includes("18") ? "18K"
                       : product.purity?.includes("14") ? "14K" : "22K";
   const multiplier    = PURITY_MULTIPLIER[purityKey] || 1;
+  const isGold        = metalType === "Gold";
   const netGoldWeight = product.gold_weight != null
                       ? Number(product.gold_weight)
                       : Number(product.weight) * multiplier;
-  const goldValue     = netGoldWeight * Number(product.gold_rate_snapshot);
+  const goldValue     = isGold ? netGoldWeight * Number(product.gold_rate_snapshot) : 0;
   const stonesTotal   = product.stones?.reduce((s, st) => s + Number(st.total_price || 0), 0) || 0;
   const costing       = goldValue + stonesTotal;
   const makingCharges = Number(product.making_charges) || 0;
   const finalPrice    = Number(product.total_price) || 0;
-
-  const metalMatch = product.description?.match(/^\[(.+?)\]/);
-  const metalType  = metalMatch ? metalMatch[1] : "Gold";
-  const cleanDesc  = product.description?.replace(/^\[.+?\]\s*/, "") || "";
 
   return (
     <div style={{ maxWidth: "900px" }}>
@@ -312,26 +313,38 @@ export default function ProductDetailPage() {
             <div style={{ padding: "10px 14px" }} />
           </div>
 
-          {/* Gold weight */}
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", borderBottom: "1px solid var(--border)", background: "rgba(201,168,76,0.03)" }}>
-            <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
-              <p style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)" }}>Gold Weight</p>
+          {/* Gold weight — only for gold products */}
+          {isGold && (
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", borderBottom: "1px solid var(--border)", background: "rgba(201,168,76,0.03)" }}>
+              <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
+                <p style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)" }}>Gold Weight</p>
+              </div>
+              <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
+                <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", color: "var(--text-primary)" }}>{netGoldWeight.toFixed(3)} g</p>
+              </div>
+              <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }} />
+              <div style={{ padding: "10px 14px" }} />
             </div>
-            <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
-              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", color: "var(--text-primary)" }}>{netGoldWeight.toFixed(3)} g</p>
-            </div>
-            <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }} />
-            <div style={{ padding: "10px 14px" }} />
-          </div>
+          )}
 
-          {/* Gold row */}
-          <CostRow
-            label={metalType}
-            weight={`${netGoldWeight.toFixed(3)} g`}
-            rate={`₹${fmt0(product.gold_rate_snapshot)}/g`}
-            cost={goldValue}
-            highlight
-          />
+          {/* Metal row — show rate only for gold */}
+          {isGold ? (
+            <CostRow
+              label={metalType}
+              weight={`${netGoldWeight.toFixed(3)} g`}
+              rate={`₹${fmt0(product.gold_rate_snapshot)}/g`}
+              cost={goldValue}
+              highlight
+            />
+          ) : (
+            <CostRow
+              label={metalType}
+              weight={`${Number(product.weight).toFixed(3)} g`}
+              rate="—"
+              cost={0}
+              highlight
+            />
+          )}
 
           {/* Stones */}
           {product.stones?.map(stone => (
@@ -386,7 +399,7 @@ export default function ProductDetailPage() {
       }}>
         {[
           { label: "Barcode",     value: product.barcode },
-          { label: "Gold Rate",   value: `₹${fmt0(product.gold_rate_snapshot)}/g (at creation)` },
+          ...(isGold ? [{ label: "Gold Rate", value: `₹${fmt0(product.gold_rate_snapshot)}/g (at creation)` }] : []),
           { label: "Order",       value: product.order_id ? product.order_id.slice(0, 8) + "…" : "Stock item" },
           ...(vendorName ? [{ label: "Vendor", value: vendorName }] : []),
           ...(setName ? [{ label: "Set", value: setName }] : []),
