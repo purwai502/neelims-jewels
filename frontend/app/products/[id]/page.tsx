@@ -286,10 +286,12 @@ export default function ProductDetailPage() {
                 <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "16px", color: "var(--text-primary)" }}>{product.name}</p>
               </div>
             </div>
-            <div style={{ textAlign: "right", flexShrink: 0 }}>
-              <p style={{ fontSize: "9px", color: "var(--text-muted)", letterSpacing: "0.1em", marginBottom: "2px" }}>PURITY</p>
-              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "20px", color: "var(--gold)" }}>{purityKey}</p>
-            </div>
+            {isGold && (
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <p style={{ fontSize: "9px", color: "var(--text-muted)", letterSpacing: "0.1em", marginBottom: "2px" }}>PURITY</p>
+                <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "20px", color: "var(--gold)" }}>{purityKey}</p>
+              </div>
+            )}
           </div>
 
           {/* Column headers */}
@@ -308,7 +310,7 @@ export default function ProductDetailPage() {
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", color: "var(--text-primary)" }}>{Number(product.weight).toFixed(3)} g</p>
             </div>
             <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
-              <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>{purityKey}</p>
+              {isGold && <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>{purityKey}</p>}
             </div>
             <div style={{ padding: "10px 14px" }} />
           </div>
