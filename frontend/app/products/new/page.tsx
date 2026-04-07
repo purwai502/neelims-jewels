@@ -173,7 +173,7 @@ export default function NewProductPage() {
 
   const handleSubmit = async () => {
     if (!name.trim())   { setError("Product name is required"); return; }
-    if (!grossWeight)   { setError("Gross weight is required"); return; }
+    if (metalType === "Gold" && !grossWeight) { setError("Gross weight is required"); return; }
     if (metalType === "Gold" && !goldWeight) { setError("Gold weight is required"); return; }
     if (metalType === "Gold" && !goldRate)   { setError("Gold rate is required"); return; }
     if (!finalPrice)    { setError("Final price is required"); return; }
@@ -187,7 +187,7 @@ export default function NewProductPage() {
       const body = {
         name:               name.trim(),
         description:        `[${metalType}]${description ? " " + description.trim() : ""}`,
-        weight:             parseFloat(grossWeight),
+        weight:             parseFloat(grossWeight) || 0,
         gold_weight:        metalType === "Gold" ? (parseFloat(goldWeight) || null) : null,
         purity:             purity || null,
         category:           category || null,
@@ -376,7 +376,7 @@ export default function NewProductPage() {
           {/* Weight row */}
           <div style={{ display: "grid", gridTemplateColumns: metalType === "Gold" ? "1fr 1fr 1fr" : "1fr", gap: "16px" }}>
             <div>
-              <FieldLabel>Gross Weight (g) *</FieldLabel>
+              <FieldLabel>Gross Weight (g){metalType === "Gold" ? " *" : " (optional)"}</FieldLabel>
               <input type="number" value={grossWeight} onChange={e => setGrossWeight(e.target.value)}
                 placeholder="e.g. 59.63" style={inputStyle} />
             </div>
