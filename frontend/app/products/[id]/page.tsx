@@ -301,19 +301,21 @@ export default function ProductDetailPage() {
             ))}
           </div>
 
-          {/* Gross weight */}
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", borderBottom: "1px solid var(--border)", background: "rgba(201,168,76,0.03)" }}>
-            <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
-              <p style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)" }}>Gross Weight</p>
+          {/* Gross weight — only if set */}
+          {Number(product.weight) > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", borderBottom: "1px solid var(--border)", background: "rgba(201,168,76,0.03)" }}>
+              <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
+                <p style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)" }}>Gross Weight</p>
+              </div>
+              <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
+                <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", color: "var(--text-primary)" }}>{Number(product.weight).toFixed(3)} g</p>
+              </div>
+              <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
+                {isGold && <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>{purityKey}</p>}
+              </div>
+              <div style={{ padding: "10px 14px" }} />
             </div>
-            <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
-              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", color: "var(--text-primary)" }}>{Number(product.weight).toFixed(3)} g</p>
-            </div>
-            <div style={{ padding: "10px 14px", borderRight: "1px solid var(--border)" }}>
-              {isGold && <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>{purityKey}</p>}
-            </div>
-            <div style={{ padding: "10px 14px" }} />
-          </div>
+          )}
 
           {/* Gold weight — only for gold products */}
           {isGold && (
@@ -329,7 +331,7 @@ export default function ProductDetailPage() {
             </div>
           )}
 
-          {/* Metal row — show rate only for gold */}
+          {/* Metal row — gold always shown; non-gold only if weight > 0 */}
           {isGold ? (
             <CostRow
               label={metalType}
@@ -338,7 +340,7 @@ export default function ProductDetailPage() {
               cost={goldValue}
               highlight
             />
-          ) : (
+          ) : Number(product.weight) > 0 ? (
             <CostRow
               label={metalType}
               weight={`${Number(product.weight).toFixed(3)} g`}
@@ -346,7 +348,7 @@ export default function ProductDetailPage() {
               cost={0}
               highlight
             />
-          )}
+          ) : null}
 
           {/* Stones */}
           {product.stones?.map(stone => (
@@ -360,25 +362,29 @@ export default function ProductDetailPage() {
             />
           ))}
 
-          {/* Costing subtotal */}
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", borderTop: "2px solid var(--border-gold)", borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
-            <div style={{ padding: "11px 14px", gridColumn: "1 / 4", borderRight: "1px solid var(--border)" }}>
-              <p style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-muted)" }}>Costing (Material Total)</p>
+          {/* Costing subtotal — only if there's something to show */}
+          {costing > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", borderTop: "2px solid var(--border-gold)", borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
+              <div style={{ padding: "11px 14px", gridColumn: "1 / 4", borderRight: "1px solid var(--border)" }}>
+                <p style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-muted)" }}>Costing (Material Total)</p>
+              </div>
+              <div style={{ padding: "11px 14px" }}>
+                <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "15px", color: "var(--text-primary)", fontWeight: 600 }}>₹{fmt(costing)}</p>
+              </div>
             </div>
-            <div style={{ padding: "11px 14px" }}>
-              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "15px", color: "var(--text-primary)", fontWeight: 600 }}>₹{fmt(costing)}</p>
-            </div>
-          </div>
+          )}
 
-          {/* Labour */}
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", borderBottom: "1px solid var(--border)" }}>
-            <div style={{ padding: "11px 14px", gridColumn: "1 / 4", borderRight: "1px solid var(--border)" }}>
-              <p style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)" }}>Labour / Making Charges</p>
+          {/* Labour — only if set */}
+          {makingCharges > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", borderBottom: "1px solid var(--border)" }}>
+              <div style={{ padding: "11px 14px", gridColumn: "1 / 4", borderRight: "1px solid var(--border)" }}>
+                <p style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)" }}>Labour / Making Charges</p>
+              </div>
+              <div style={{ padding: "11px 14px" }}>
+                <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "15px", color: "#5CB87A" }}>₹{fmt(makingCharges)}</p>
+              </div>
             </div>
-            <div style={{ padding: "11px 14px" }}>
-              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "15px", color: "#5CB87A" }}>₹{fmt(makingCharges)}</p>
-            </div>
-          </div>
+          )}
 
           {/* Final Price */}
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", background: "var(--gold-subtle)", borderTop: "2px solid var(--border-gold)" }}>
