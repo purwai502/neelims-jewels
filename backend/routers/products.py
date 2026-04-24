@@ -218,7 +218,8 @@ def delete_product(
 
 
 class MarkSoldRequest(BaseModel):
-    client_id: Optional[str] = None
+    client_id:    Optional[str]   = None
+    buyback_rate: Optional[float] = 0.8
 
 
 @router.patch("/{product_id}/mark-sold", response_model=ProductOut)
@@ -234,6 +235,8 @@ def mark_sold(
     product.is_sold = True
     if body.client_id:
         product.sold_to_client_id = body.client_id
+    if body.buyback_rate is not None:
+        product.buyback_rate = body.buyback_rate
     db.commit()
     db.refresh(product)
     product.stones = db.query(ProductStone).filter(ProductStone.product_id == product.id).all()

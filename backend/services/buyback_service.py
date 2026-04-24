@@ -25,9 +25,10 @@ def calculate_buyback_value(product_id: str, db: Session) -> dict:
     # gold variance — difference between then and now
     gold_variance = current_gold_value - original_gold_value
 
-    # buyback formula: 80% of original value + gold variance
-    original_piece_value = original_gold_value
-    buyback_value = (original_piece_value * 0.8) + gold_variance
+    # buyback formula: buyback_rate% of original price + gold variance
+    buyback_rate = float(product.buyback_rate) if product.buyback_rate is not None else 0.8
+    original_piece_value = float(product.total_price) if product.total_price else original_gold_value
+    buyback_value = (original_piece_value * buyback_rate) + gold_variance
 
     # look up original buyer if stored
     original_buyer = None
@@ -40,9 +41,10 @@ def calculate_buyback_value(product_id: str, db: Session) -> dict:
         "barcode":              product.barcode,
         "weight":               float(product.weight),
         "purity":               product.purity,
+        "buyback_rate":         buyback_rate,
         "original_price":       float(product.total_price) if product.total_price else 0,
-        "deduction_20_pct":     round(float(product.total_price or 0) * 0.2, 2),
-        "buyback_base":         round(float(product.total_price or 0) * 0.8, 2),
+        "deduction_pct":        round(float(product.total_price or 0) * (1 - buyback_rate), 2),
+        "buyback_base":         round(float(product.total_price or 0) * buyback_rate, 2),
         "original_gold_rate":   float(product.gold_rate_snapshot),
         "current_gold_rate":    current_rate,
         "original_gold_value":  original_gold_value,

@@ -75,6 +75,7 @@ export default function SalePage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [clientId, setClientId] = useState("");
+  const [buybackPct, setBuybackPct] = useState(80);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [done, setDone] = useState(false);
@@ -121,7 +122,7 @@ export default function SalePage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ client_id: clientId || null }),
+          body: JSON.stringify({ client_id: clientId || null, buyback_rate: buybackPct / 100 }),
         },
       );
       if (!res.ok) throw new Error("Failed");
@@ -330,6 +331,49 @@ export default function SalePage() {
                 </option>
               ))}
             </select>
+
+            <div style={{ marginBottom: "16px" }}>
+              <p style={{
+                fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase",
+                color: "var(--gold)", marginBottom: "10px",
+                fontFamily: "'Didact Gothic', sans-serif",
+              }}>
+                Buyback Policy
+              </p>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                {[70, 75, 80, 85, 90].map(pct => (
+                  <button
+                    key={pct}
+                    onClick={() => setBuybackPct(pct)}
+                    style={{
+                      padding: "8px 16px",
+                      border: `1px solid ${buybackPct === pct ? "var(--gold)" : "var(--border)"}`,
+                      background: buybackPct === pct ? "var(--gold-subtle)" : "transparent",
+                      color: buybackPct === pct ? "var(--gold)" : "var(--text-muted)",
+                      fontFamily: "'Didact Gothic', sans-serif",
+                      fontSize: "12px", cursor: "pointer",
+                    }}
+                  >
+                    {pct}%
+                  </button>
+                ))}
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <input
+                    type="number"
+                    min={1} max={100}
+                    value={buybackPct}
+                    onChange={e => setBuybackPct(Math.min(100, Math.max(1, Number(e.target.value))))}
+                    style={{
+                      width: "64px", padding: "8px 10px",
+                      background: "var(--surface)", border: "1px solid var(--border)",
+                      color: "var(--text-primary)", fontFamily: "'Didact Gothic', sans-serif",
+                      fontSize: "12px", outline: "none",
+                    }}
+                  />
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>%</span>
+                </div>
+              </div>
+            </div>
 
             {error && (
               <p
@@ -851,7 +895,7 @@ export default function SalePage() {
                   >
                     This piece is eligible for buyback at{" "}
                     <span style={{ fontStyle: "normal", fontWeight: 700, color: "#111" }}>
-                      80% of the original sale price
+                      {buybackPct}% of the original sale price
                     </span>
                     , with the gold component adjusted to the prevailing gold rate at the time of return.
                   </p>

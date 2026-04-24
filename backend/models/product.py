@@ -25,6 +25,7 @@ class Product(Base):
     image_path         = Column(String(255), nullable=True)
     is_sold            = Column(Boolean, nullable=False, default=False)
     sold_to_client_id  = Column(UUID(as_uuid=True), ForeignKey("clients.id"), nullable=True)
+    buyback_rate       = Column(Numeric(5, 4), nullable=True, default=0.8)
     set_id             = Column(UUID(as_uuid=True), ForeignKey("product_sets.id"), nullable=True)
     created_by         = Column(UUID(as_uuid=True), nullable=True)
     created_at         = Column(String, server_default=func.now())
