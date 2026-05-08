@@ -55,6 +55,7 @@ export default function ProductDetailPage() {
   const id        = params.id as string;
 
   const [product,      setProduct]      = useState<Product | null>(null);
+  const [role,         setRole]         = useState("");
   const [loading,      setLoading]      = useState(true);
   const [showTag,      setShowTag]      = useState(false);
   const [uploading,    setUploading]    = useState(false);
@@ -68,6 +69,7 @@ export default function ProductDetailPage() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
+    setRole(localStorage.getItem("role") || "");
     const h = { "Authorization": `Bearer ${token}` };
     Promise.all([
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${id}`, { headers: h }).then(r => r.json()),
@@ -411,8 +413,8 @@ export default function ProductDetailPage() {
           { label: "Order",       value: product.order_id ? product.order_id.slice(0, 8) + "…" : "Stock item" },
           ...(vendorName ? [{ label: "Vendor", value: vendorName }] : []),
           ...(setName ? [{ label: "Set", value: setName }] : []),
-          ...(product.cost_price ? [{ label: "Studio Cost", value: `₹${fmt(product.cost_price)}` }] : []),
-          ...(product.cost_price && product.is_sold
+          ...(product.cost_price && role !== "EMPLOYEE" ? [{ label: "Studio Cost", value: `₹${fmt(product.cost_price)}` }] : []),
+          ...(product.cost_price && product.is_sold && role !== "EMPLOYEE"
             ? [{ label: "Gross Profit", value: `₹${fmt(finalPrice - product.cost_price)}` }]
             : []),
         ].map(({ label, value }) => (
