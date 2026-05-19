@@ -409,7 +409,8 @@ export default function ProductDetailPage() {
       }}>
         {[
           { label: "Barcode",     value: product.barcode },
-          ...(isGold ? [{ label: "Gold Rate", value: `₹${fmt0(product.gold_rate_snapshot)}/g (at creation)` }] : []),
+          ...(isGold && !product.is_sold ? [{ label: "Gold Rate", value: `₹${fmt0(product.gold_rate_snapshot)}/g (at creation)` }] : []),
+          ...(isGold && product.is_sold ? [{ label: "24K Rate at Sale", value: `₹${fmt0(Number(product.gold_rate_snapshot) / multiplier)}/g` }] : []),
           { label: "Order",       value: product.order_id ? product.order_id.slice(0, 8) + "…" : "Stock item" },
           ...(vendorName ? [{ label: "Vendor", value: vendorName }] : []),
           ...(setName ? [{ label: "Set", value: setName }] : []),
