@@ -52,6 +52,25 @@ export default function NewProductPage() {
   const [imagePreview,     setImagePreview]     = useState<string | null>(null);
   const [manualFinalPrice, setManualFinalPrice] = useState(false);
 
+  // On-approval (vendor consignment/memo)
+  const [acquisitionType,      setAcquisitionType]      = useState<"PURCHASED" | "ON_APPROVAL">("PURCHASED");
+  const [approvalReceivedDate, setApprovalReceivedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [approvalPeriodDays,   setApprovalPeriodDays]   = useState("15");
+  const [approvalDueDate,      setApprovalDueDate]      = useState("");
+  const [manualDueDate,        setManualDueDate]        = useState(false);
+
+  const computedDueDate = (() => {
+    const days = parseInt(approvalPeriodDays, 10);
+    if (!approvalReceivedDate || !days) return "";
+    const d = new Date(approvalReceivedDate);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  })();
+
+  useEffect(() => {
+    if (!manualDueDate) setApprovalDueDate(computedDueDate);
+  }, [computedDueDate, manualDueDate]);
+
   // data
   const [orders,    setOrders]    = useState<Order[]>([]);
   const [vendors,   setVendors]   = useState<Vendor[]>([]);
@@ -177,6 +196,8 @@ export default function NewProductPage() {
     if (metalType === "Gold" && !goldWeight) { setError("Gold weight is required"); return; }
     if (metalType === "Gold" && !goldRate)   { setError("Gold rate is required"); return; }
     if (!finalPrice)    { setError("Final price is required"); return; }
+    if (acquisitionType === "ON_APPROVAL" && !vendorId) { setError("Vendor is required for products on approval"); return; }
+    if (acquisitionType === "ON_APPROVAL" && !approvalDueDate) { setError("Approval due date is required"); return; }
 
     setSaving(true);
     setError("");
@@ -198,6 +219,9 @@ export default function NewProductPage() {
         set_id:             setId || null,
         total_price:        parseFloat(finalPrice),
         order_id:           orderId || null,
+        acquisition_type:       acquisitionType,
+        approval_received_date: acquisitionType === "ON_APPROVAL" ? approvalReceivedDate : null,
+        approval_due_date:      acquisitionType === "ON_APPROVAL" ? approvalDueDate : null,
         stones: stones.map(s => ({
           stone_name:      s.stone_name,
           weight:          parseFloat(s.weight) || null,
@@ -318,6 +342,44 @@ export default function NewProductPage() {
               style={inputStyle} />
           </div>
 
+          {/* Acquisition type: Purchased Stock vs On Approval */}
+          <div>
+            <FieldLabel>Acquisition Type</FieldLabel>
+            <div style={{ display: "flex", gap: "8px" }}>
+              {(["PURCHASED", "ON_APPROVAL"] as const).map(t => (
+                <button key={t} onClick={() => setAcquisitionType(t)} style={pillStyle(acquisitionType === t)}>
+                  {t === "PURCHASED" ? "Purchased Stock" : "On Approval"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {acquisitionType === "ON_APPROVAL" && (
+            <div style={{ padding: "16px", border: "1px solid var(--border-gold)", background: "rgba(201,168,76,0.04)", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <p style={{ fontSize: "10px", color: "var(--text-muted)", fontStyle: "italic", fontFamily: "'Cormorant', serif" }}>
+                This item is on loan from the vendor for evaluation. Select a vendor below, and set when it's due back.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
+                <div>
+                  <FieldLabel>Date Received</FieldLabel>
+                  <input type="date" value={approvalReceivedDate} onChange={e => setApprovalReceivedDate(e.target.value)} style={inputStyle} />
+                </div>
+                <div>
+                  <FieldLabel>Approval Period (days)</FieldLabel>
+                  <input type="number" value={approvalPeriodDays}
+                    onChange={e => { setApprovalPeriodDays(e.target.value); setManualDueDate(false); }}
+                    placeholder="e.g. 15" style={inputStyle} />
+                </div>
+                <div>
+                  <FieldLabel>Due Date</FieldLabel>
+                  <input type="date" value={approvalDueDate}
+                    onChange={e => { setApprovalDueDate(e.target.value); setManualDueDate(true); }}
+                    style={inputStyle} />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Metal type */}
           <div>
             <FieldLabel>Metal Type</FieldLabel>
@@ -434,7 +496,7 @@ export default function NewProductPage() {
 
           {/* Vendor */}
           <div>
-            <FieldLabel>Vendor / Supplier (optional)</FieldLabel>
+            <FieldLabel>Vendor / Supplier{acquisitionType === "ON_APPROVAL" ? " *" : " (optional)"}</FieldLabel>
             <select value={vendorId} onChange={e => setVendorId(e.target.value)}
               style={{ ...inputStyle, cursor: "pointer" }}>
               <option value="">— No vendor —</option>

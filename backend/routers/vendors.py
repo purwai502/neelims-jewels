@@ -99,10 +99,13 @@ def get_vendor_balance(
 
     from sqlalchemy import text
 
+    # Items still on approval (not yet purchased or sold) aren't owned stock
+    # yet, so they don't count toward what's owed to the vendor.
     total_goods_received = db.execute(text("""
         SELECT COALESCE(SUM(cost_price), 0)
         FROM products
         WHERE vendor_id = :vendor_id AND cost_price IS NOT NULL
+          AND NOT (acquisition_type = 'ON_APPROVAL' AND approval_status = 'PENDING')
     """), {"vendor_id": vendor_id}).scalar()
 
     total_paid = db.execute(text("""
@@ -140,7 +143,10 @@ def get_vendor_products(
             p.cost_price::float,
             p.total_price::float,
             p.is_sold,
-            p.created_at
+            p.created_at,
+            p.acquisition_type,
+            p.approval_status,
+            p.approval_due_date
         FROM products p
         WHERE p.vendor_id = :vendor_id
         ORDER BY p.created_at DESC

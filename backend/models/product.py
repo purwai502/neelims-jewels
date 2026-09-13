@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Numeric, ForeignKey, Boolean
+from sqlalchemy import Column, String, Numeric, ForeignKey, Boolean, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
@@ -29,3 +29,15 @@ class Product(Base):
     set_id             = Column(UUID(as_uuid=True), ForeignKey("product_sets.id"), nullable=True)
     created_by         = Column(UUID(as_uuid=True), nullable=True)
     created_at         = Column(String, server_default=func.now())
+
+    # --- On-approval (vendor consignment/memo) tracking ---
+    # acquisition_type: "PURCHASED" (default, fully owned) | "ON_APPROVAL" (vendor lent, time-limited)
+    acquisition_type            = Column(String(20), nullable=False, server_default="PURCHASED")
+    # approval_status: only meaningful when acquisition_type == "ON_APPROVAL". "PENDING" | "PURCHASED"
+    approval_status              = Column(String(20), nullable=True)
+    approval_received_date       = Column(String, nullable=True)
+    # current active due date — editable via the extend-approval action
+    approval_due_date            = Column(String, nullable=True)
+    # set once at creation; kept for reference after the due date is extended
+    approval_original_due_date   = Column(String, nullable=True)
+    approval_extension_count     = Column(Integer, nullable=False, server_default="0")

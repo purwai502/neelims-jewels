@@ -13,6 +13,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 import os
 import uuid
+from datetime import date, timedelta
 from fastapi import UploadFile, File
 
 GOLD_PURITIES = {"24K", "22K", "18K", "14K"}
@@ -43,6 +44,37 @@ def create_product(
     computed_price = gold_value + stones_total + (product_data.making_charges or 0)
     total_price = product_data.total_price if product_data.total_price is not None else computed_price
 
+    # On-approval (vendor consignment/memo) handling
+    acquisition_type = (product_data.acquisition_type or "PURCHASED").upper()
+    approval_status = None
+    approval_received_date = None
+    approval_due_date = None
+    approval_original_due_date = None
+
+    if acquisition_type == "ON_APPROVAL":
+        if not product_data.vendor_id:
+            raise HTTPException(status_code=400, detail="Vendor is required for products on approval")
+
+        approval_status = "PENDING"
+        if product_data.approval_received_date:
+            approval_received_date = product_data.approval_received_date
+            try:
+                received = date.fromisoformat(product_data.approval_received_date)
+            except ValueError:
+                received = date.today()
+        else:
+            received = date.today()
+            approval_received_date = received.isoformat()
+
+        if product_data.approval_due_date:
+            approval_due_date = product_data.approval_due_date
+        elif product_data.approval_period_days:
+            approval_due_date = (received + timedelta(days=product_data.approval_period_days)).isoformat()
+        else:
+            raise HTTPException(status_code=400, detail="approval_due_date or approval_period_days is required for products on approval")
+
+        approval_original_due_date = approval_due_date
+
     product = Product(
         name               = product_data.name,
         description        = product_data.description,
@@ -59,7 +91,12 @@ def create_product(
         order_id           = product_data.order_id,
         set_id             = product_data.set_id,
         barcode            = barcode,
-        created_by         = current_user.id
+        created_by         = current_user.id,
+        acquisition_type            = acquisition_type,
+        approval_status             = approval_status,
+        approval_received_date      = approval_received_date,
+        approval_due_date           = approval_due_date,
+        approval_original_due_date  = approval_original_due_date,
     )
     db.add(product)
     db.flush()
@@ -210,11 +247,38 @@ def delete_product(
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    if product.is_sold:
+        raise HTTPException(status_code=400, detail="Cannot delete a product that has already been sold")
     # delete stones first (FK constraint)
     db.query(ProductStone).filter(ProductStone.product_id == product.id).delete()
     db.delete(product)
     db.commit()
     return {"detail": "Product deleted"}
+
+
+class ExtendApprovalRequest(BaseModel):
+    new_due_date: str
+
+
+@router.patch("/{product_id}/extend-approval", response_model=ProductOut)
+def extend_approval(
+    product_id: str,
+    body: ExtendApprovalRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_or_above)
+):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    if product.acquisition_type != "ON_APPROVAL" or product.approval_status != "PENDING":
+        raise HTTPException(status_code=400, detail="Only products pending approval can have their due date extended")
+
+    product.approval_due_date = body.new_due_date
+    product.approval_extension_count = (product.approval_extension_count or 0) + 1
+    db.commit()
+    db.refresh(product)
+    product.stones = db.query(ProductStone).filter(ProductStone.product_id == product.id).all()
+    return product
 
 
 class MarkSoldRequest(BaseModel):
@@ -237,6 +301,10 @@ def mark_sold(
         product.sold_to_client_id = body.client_id
     if body.buyback_rate is not None:
         product.buyback_rate = body.buyback_rate
+    # Selling an item still on approval is the rare "buy it for stock" case —
+    # auto-convert it to a vendor purchase as part of the same sale.
+    if product.acquisition_type == "ON_APPROVAL" and product.approval_status == "PENDING":
+        product.approval_status = "PURCHASED"
     db.commit()
     db.refresh(product)
     product.stones = db.query(ProductStone).filter(ProductStone.product_id == product.id).all()

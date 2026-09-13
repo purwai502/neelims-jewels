@@ -28,6 +28,8 @@ interface Product {
   order_id: string | null;
   image_path: string | null;
   stones: Stone[];
+  acquisition_type: string;
+  approval_status: string | null;
 }
 interface Client {
   id: string;
@@ -306,6 +308,16 @@ export default function SalePage() {
               Select the client purchasing this piece. Their name will appear on
               the Detail Breakdown.
             </p>
+
+            {product.acquisition_type === "ON_APPROVAL" && product.approval_status === "PENDING" && (
+              <p style={{
+                fontSize: "11px", color: "var(--gold)", fontStyle: "italic",
+                fontFamily: "'Cormorant', serif", marginBottom: "16px",
+                padding: "10px 14px", border: "1px solid var(--border-gold)", background: "rgba(201,168,76,0.06)",
+              }}>
+                This piece is still on approval from the vendor. Confirming this sale will also purchase it from the vendor.
+              </p>
+            )}
 
             <select
               value={clientId}

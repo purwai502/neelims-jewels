@@ -35,6 +35,14 @@ class ProductCreate(BaseModel):
     set_id:         Optional[UUID]  = None
     stones:         Optional[List[ProductStoneCreate]] = []
 
+    # On-approval (vendor consignment/memo) fields — only used when acquisition_type == "ON_APPROVAL"
+    acquisition_type:      Optional[str]   = "PURCHASED"
+    approval_received_date: Optional[str]  = None
+    approval_due_date:      Optional[str]  = None
+    # convenience: if approval_due_date isn't given, the router computes it as
+    # approval_received_date + approval_period_days
+    approval_period_days:   Optional[int]  = None
+
 class ProductOut(BaseModel):
     id:                 UUID
     name:               str
@@ -58,6 +66,12 @@ class ProductOut(BaseModel):
     set_id:             Optional[UUID] = None
     stones:             Optional[List[ProductStoneOut]] = []
 
+    acquisition_type:            str = "PURCHASED"
+    approval_status:              Optional[str] = None
+    approval_received_date:       Optional[str] = None
+    approval_due_date:            Optional[str] = None
+    approval_original_due_date:   Optional[str] = None
+    approval_extension_count:     int = 0
+
     class Config:
         from_attributes = True
-

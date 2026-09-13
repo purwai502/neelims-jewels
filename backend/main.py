@@ -54,6 +54,25 @@ def run_migrations():
             conn.execute(text(
                 "ALTER TABLE vendors ADD COLUMN IF NOT EXISTS pan_number VARCHAR(50)"
             ))
+            # On-approval (vendor consignment/memo) product tracking
+            conn.execute(text(
+                "ALTER TABLE products ADD COLUMN IF NOT EXISTS acquisition_type VARCHAR(20) NOT NULL DEFAULT 'PURCHASED'"
+            ))
+            conn.execute(text(
+                "ALTER TABLE products ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20)"
+            ))
+            conn.execute(text(
+                "ALTER TABLE products ADD COLUMN IF NOT EXISTS approval_received_date VARCHAR"
+            ))
+            conn.execute(text(
+                "ALTER TABLE products ADD COLUMN IF NOT EXISTS approval_due_date VARCHAR"
+            ))
+            conn.execute(text(
+                "ALTER TABLE products ADD COLUMN IF NOT EXISTS approval_original_due_date VARCHAR"
+            ))
+            conn.execute(text(
+                "ALTER TABLE products ADD COLUMN IF NOT EXISTS approval_extension_count INTEGER NOT NULL DEFAULT 0"
+            ))
             conn.commit()
     except Exception as e:
         print(f"[migration] skipped: {e}")

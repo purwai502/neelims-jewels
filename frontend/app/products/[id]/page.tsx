@@ -40,6 +40,12 @@ interface Product {
   order_id: string | null;
   image_path: string | null;
   stones: Stone[];
+  acquisition_type: string;
+  approval_status: string | null;
+  approval_received_date: string | null;
+  approval_due_date: string | null;
+  approval_original_due_date: string | null;
+  approval_extension_count: number;
 }
 
 const fmt  = (n: number) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -61,6 +67,10 @@ export default function ProductDetailPage() {
   const [uploading,    setUploading]    = useState(false);
   const [markingSold,  setMarkingSold]  = useState(false);
   const [deleting,     setDeleting]     = useState(false);
+  const [returning,    setReturning]    = useState(false);
+  const [extending,    setExtending]    = useState(false);
+  const [showExtend,   setShowExtend]   = useState(false);
+  const [newDueDate,   setNewDueDate]   = useState("");
   const [buybacks,     setBuybacks]     = useState<BuybackRecord[]>([]);
   const [vendorName,   setVendorName]   = useState<string | null>(null);
   const [setName,      setSetName]      = useState<string | null>(null);
@@ -155,6 +165,43 @@ export default function ProductDetailPage() {
     setMarkingSold(false);
   };
 
+  const handleReturnToVendor = async () => {
+    if (!product) return;
+    if (!confirm(`Return "${product.name}" to the vendor? This removes it from the system — this cannot be undone.`)) return;
+    setReturning(true);
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${product.id}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` },
+    });
+    if (res.ok) {
+      router.push("/products");
+    } else {
+      alert("Failed to return product to vendor.");
+      setReturning(false);
+    }
+  };
+
+  const handleExtendApproval = async () => {
+    if (!product || !newDueDate) return;
+    setExtending(true);
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${product.id}/extend-approval`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ new_due_date: newDueDate }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setProduct(updated);
+      setShowExtend(false);
+      setNewDueDate("");
+    } else {
+      alert("Failed to extend approval due date.");
+    }
+    setExtending(false);
+  };
+
   if (loading) return (
     <p style={{ color: "var(--text-muted)", fontFamily: "'Cormorant', serif", fontSize: "18px", fontStyle: "italic" }}>
       Loading...
@@ -181,6 +228,23 @@ export default function ProductDetailPage() {
   const makingCharges = Number(product.making_charges) || 0;
   const finalPrice    = Number(product.total_price) || 0;
 
+  const isPendingApproval = product.acquisition_type === "ON_APPROVAL" && product.approval_status === "PENDING" && !product.is_sold;
+  let approvalDaysLeft: number | null = null;
+  let approvalOverdue = false;
+  let approvalBadgeLabel = "";
+  if (isPendingApproval && product.approval_due_date) {
+    const due = new Date(product.approval_due_date);
+    due.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    approvalDaysLeft = Math.round((due.getTime() - today.getTime()) / 86400000);
+    approvalOverdue = approvalDaysLeft < 0;
+    approvalBadgeLabel = approvalOverdue
+      ? `Overdue by ${Math.abs(approvalDaysLeft)}d`
+      : approvalDaysLeft === 0 ? "Due today" : `On Approval · ${approvalDaysLeft}d left`;
+  }
+  const canManage = role !== "EMPLOYEE";
+
   return (
     <div style={{ maxWidth: "900px" }}>
       {showTag && <ProductTag product={product} onClose={() => setShowTag(false)} />}
@@ -196,13 +260,23 @@ export default function ProductDetailPage() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "6px" }}>
               <p className="label-caps" style={{ margin: 0 }}>✦ &nbsp; {product.barcode}</p>
-              <span style={{
-                fontSize: "8px", letterSpacing: "0.15em", textTransform: "uppercase",
-                padding: "3px 10px",
-                border: `1px solid ${product.is_sold ? "rgba(92,184,122,0.4)" : "rgba(201,168,76,0.4)"}`,
-                color: product.is_sold ? "#5CB87A" : "var(--gold)",
-                fontFamily: "'Didact Gothic', sans-serif",
-              }}>{product.is_sold ? "Sold" : "Available"}</span>
+              {isPendingApproval ? (
+                <span style={{
+                  fontSize: "8px", letterSpacing: "0.15em", textTransform: "uppercase",
+                  padding: "3px 10px",
+                  border: `1px solid ${approvalOverdue ? "#E05C7A" : "var(--gold)"}66`,
+                  color: approvalOverdue ? "#E05C7A" : "var(--gold)",
+                  fontFamily: "'Didact Gothic', sans-serif",
+                }}>{approvalBadgeLabel}</span>
+              ) : (
+                <span style={{
+                  fontSize: "8px", letterSpacing: "0.15em", textTransform: "uppercase",
+                  padding: "3px 10px",
+                  border: `1px solid ${product.is_sold ? "rgba(92,184,122,0.4)" : "rgba(201,168,76,0.4)"}`,
+                  color: product.is_sold ? "#5CB87A" : "var(--gold)",
+                  fontFamily: "'Didact Gothic', sans-serif",
+                }}>{product.is_sold ? "Sold" : "Available"}</span>
+              )}
             </div>
             <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "38px", fontWeight: 400, fontStyle: "italic", color: "var(--text-primary)", lineHeight: 1.1 }}>
               {product.name}
@@ -425,6 +499,69 @@ export default function ProductDetailPage() {
           </div>
         ))}
       </div>
+
+      {/* Approval Details */}
+      {product.acquisition_type === "ON_APPROVAL" && (
+        <div style={{ marginTop: "20px", padding: "16px 20px", background: "var(--bg-card)", border: `1px solid ${approvalOverdue ? "rgba(224,92,122,0.4)" : "var(--border-gold)"}` }}>
+          <p style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: approvalOverdue ? "#E05C7A" : "var(--gold)", marginBottom: "12px" }}>
+            ✦ Approval Details
+          </p>
+          <div style={{ display: "flex", gap: "40px", flexWrap: "wrap", marginBottom: isPendingApproval && canManage ? "16px" : 0 }}>
+            <div>
+              <p style={{ fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "4px" }}>Date Received</p>
+              <p style={{ fontSize: "12px", color: "var(--text-secondary)", fontFamily: "'Didact Gothic', sans-serif" }}>{product.approval_received_date || "—"}</p>
+            </div>
+            <div>
+              <p style={{ fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "4px" }}>Due Date</p>
+              <p style={{ fontSize: "12px", color: "var(--text-secondary)", fontFamily: "'Didact Gothic', sans-serif" }}>{product.approval_due_date || "—"}</p>
+            </div>
+            {isPendingApproval && approvalBadgeLabel && (
+              <div>
+                <p style={{ fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: approvalOverdue ? "#E05C7A" : "var(--gold)", marginBottom: "4px" }}>Status</p>
+                <p style={{ fontSize: "12px", color: approvalOverdue ? "#E05C7A" : "var(--text-secondary)", fontFamily: "'Didact Gothic', sans-serif" }}>{approvalBadgeLabel}</p>
+              </div>
+            )}
+            {product.approval_extension_count > 0 && (
+              <div>
+                <p style={{ fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "4px" }}>Extended</p>
+                <p style={{ fontSize: "12px", color: "var(--text-secondary)", fontFamily: "'Didact Gothic', sans-serif" }}>
+                  {product.approval_extension_count}x (originally {product.approval_original_due_date || "—"})
+                </p>
+              </div>
+            )}
+            {!isPendingApproval && product.approval_status === "PURCHASED" && (
+              <div>
+                <p style={{ fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#5CB87A", marginBottom: "4px" }}>Status</p>
+                <p style={{ fontSize: "12px", color: "#5CB87A", fontFamily: "'Didact Gothic', sans-serif" }}>Purchased from vendor</p>
+              </div>
+            )}
+          </div>
+
+          {isPendingApproval && canManage && (
+            <div>
+              {!showExtend ? (
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button onClick={() => { setShowExtend(true); setNewDueDate(product.approval_due_date || ""); }} className="btn-outline" style={{ fontSize: "11px" }}>
+                    Extend Approval
+                  </button>
+                  <button onClick={handleReturnToVendor} disabled={returning} className="btn-outline" style={{ fontSize: "11px", color: "#E05C7A", borderColor: "rgba(224,92,122,0.4)" }}>
+                    {returning ? "Returning…" : "Return to Vendor"}
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  <input type="date" value={newDueDate} onChange={e => setNewDueDate(e.target.value)}
+                    style={{ padding: "8px 12px", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-primary)", fontFamily: "'Didact Gothic', sans-serif", fontSize: "12px", outline: "none" }} />
+                  <button onClick={handleExtendApproval} disabled={extending || !newDueDate} className="btn-gold" style={{ fontSize: "11px" }}>
+                    {extending ? "Saving…" : "Save New Due Date"}
+                  </button>
+                  <button onClick={() => setShowExtend(false)} className="btn-outline" style={{ fontSize: "11px" }}>Cancel</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Set siblings */}
       {setMembers.length > 0 && (

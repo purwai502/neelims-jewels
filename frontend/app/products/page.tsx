@@ -28,6 +28,21 @@ interface Product {
   is_sold: boolean;
   set_id: string | null;
   stones: Stone[];
+  acquisition_type: string;
+  approval_status: string | null;
+  approval_due_date: string | null;
+}
+
+function approvalDaysInfo(dueDate: string | null | undefined) {
+  if (!dueDate) return null;
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((due.getTime() - today.getTime()) / 86400000);
+  return days < 0
+    ? { label: `Overdue by ${Math.abs(days)}d`, overdue: true }
+    : { label: days === 0 ? "Due today" : `On Approval · ${days}d left`, overdue: false };
 }
 
 interface ProductSet { id: string; name: string; }
@@ -43,7 +58,7 @@ export default function ProductsPage() {
   const [carouselIdx,       setCarouselIdx]       = useState<Record<string, number>>({});
   const [loading,           setLoading]           = useState(true);
   const [search,            setSearch]            = useState("");
-  const [statusFilter,      setStatusFilter]      = useState<"all" | "available" | "sold">("all");
+  const [statusFilter,      setStatusFilter]      = useState<"all" | "available" | "sold" | "on_approval">("all");
   const [filterCategory,    setFilterCategory]    = useState("");
   const [filterSubCategory, setFilterSubCategory] = useState("");
   const [filterPurity,      setFilterPurity]      = useState("");
@@ -79,8 +94,9 @@ export default function ProductsPage() {
       (p.purity ?? "").toLowerCase().includes(search.toLowerCase());
     const matchStatus =
       statusFilter === "all" ||
-      (statusFilter === "sold"      &&  p.is_sold) ||
-      (statusFilter === "available" && !p.is_sold);
+      (statusFilter === "sold"         &&  p.is_sold) ||
+      (statusFilter === "available"    && !p.is_sold && !(p.acquisition_type === "ON_APPROVAL" && p.approval_status === "PENDING")) ||
+      (statusFilter === "on_approval"  && p.acquisition_type === "ON_APPROVAL" && p.approval_status === "PENDING");
     const matchCategory    = !filterCategory    || p.category    === filterCategory;
     const matchSubCategory = !filterSubCategory || p.sub_category === filterSubCategory;
     const matchPurity      = !filterPurity      || p.purity       === filterPurity;
@@ -163,8 +179,8 @@ export default function ProductsPage() {
           {CATEGORIES.map(c => filterPill(c, filterCategory === c, () => handleCategoryFilter(c)))}
           <div style={{ flex: 1 }} />
           <span style={{ fontSize: "9px", letterSpacing: "0.15em", color: "var(--text-muted)", textTransform: "uppercase" }}>Status</span>
-          {(["all", "available", "sold"] as const).map(f =>
-            filterPill(f, statusFilter === f, () => setStatusFilter(f))
+          {(["all", "available", "on_approval", "sold"] as const).map(f =>
+            filterPill(f === "on_approval" ? "on approval" : f, statusFilter === f, () => setStatusFilter(f))
           )}
         </div>
 
@@ -240,7 +256,19 @@ export default function ProductsPage() {
               <div style={{ padding: "18px 20px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                   <p style={{ fontSize: "10px", letterSpacing: "0.2em", color: "var(--gold)", fontFamily: "'Didact Gothic', sans-serif", margin: 0 }}>{product.barcode}</p>
-                  <span style={{ fontSize: "8px", letterSpacing: "0.15em", textTransform: "uppercase", padding: "3px 8px", border: `1px solid ${product.is_sold ? "rgba(92,184,122,0.4)" : "rgba(201,168,76,0.4)"}`, color: product.is_sold ? "#5CB87A" : "var(--gold)", fontFamily: "'Didact Gothic', sans-serif" }}>{product.is_sold ? "Sold" : "Available"}</span>
+                  {(() => {
+                    const onApproval = !product.is_sold && product.acquisition_type === "ON_APPROVAL" && product.approval_status === "PENDING";
+                    const approvalInfo = onApproval ? approvalDaysInfo(product.approval_due_date) : null;
+                    if (approvalInfo) {
+                      const color = approvalInfo.overdue ? "#E05C7A" : "var(--gold)";
+                      return (
+                        <span style={{ fontSize: "8px", letterSpacing: "0.15em", textTransform: "uppercase", padding: "3px 8px", border: `1px solid ${color}66`, color, fontFamily: "'Didact Gothic', sans-serif" }}>{approvalInfo.label}</span>
+                      );
+                    }
+                    return (
+                      <span style={{ fontSize: "8px", letterSpacing: "0.15em", textTransform: "uppercase", padding: "3px 8px", border: `1px solid ${product.is_sold ? "rgba(92,184,122,0.4)" : "rgba(201,168,76,0.4)"}`, color: product.is_sold ? "#5CB87A" : "var(--gold)", fontFamily: "'Didact Gothic', sans-serif" }}>{product.is_sold ? "Sold" : "Available"}</span>
+                    );
+                  })()}
                 </div>
                 {(product.category || product.sub_category) && (
                   <p style={{ fontSize: "9px", letterSpacing: "0.12em", color: "var(--text-muted)", textTransform: "uppercase", margin: "0 0 6px" }}>{[product.category, product.sub_category].filter(Boolean).join(" · ")}</p>
