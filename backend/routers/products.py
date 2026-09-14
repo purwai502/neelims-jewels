@@ -5,7 +5,7 @@ from database import get_db
 from models.product import Product
 from models.product_stone import ProductStone
 from schemas.product import ProductCreate, ProductUpdate, ProductOut
-from services.gold_service import get_rate_for_purity
+from services.gold_service import get_rate_for_purity, apply_live_valuation, GOLD_PURITIES
 from services.barcode_service import generate_barcode
 from routers.users import get_current_user, require_manager_or_above
 from models.user import User
@@ -15,8 +15,6 @@ import os
 import uuid
 from datetime import date, timedelta
 from fastapi import UploadFile, File
-
-GOLD_PURITIES = {"24K", "22K", "18K", "14K"}
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -138,6 +136,7 @@ def get_all_products(
     products = query.all()
     for product in products:
         product.stones = db.query(ProductStone).filter(ProductStone.product_id == product.id).all()
+        apply_live_valuation(product, db)
     return products
 
 @router.get("/barcode/{barcode}", response_model=ProductOut)
@@ -150,6 +149,7 @@ def get_product_by_barcode(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     product.stones = db.query(ProductStone).filter(ProductStone.product_id == product.id).all()
+    apply_live_valuation(product, db)
     return product
 
 @router.get("/{product_id}", response_model=ProductOut)
@@ -162,6 +162,7 @@ def get_product(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     product.stones = db.query(ProductStone).filter(ProductStone.product_id == product.id).all()
+    apply_live_valuation(product, db)
     return product
 
 @router.patch("/{product_id}", response_model=ProductOut)
@@ -278,6 +279,7 @@ def extend_approval(
     db.commit()
     db.refresh(product)
     product.stones = db.query(ProductStone).filter(ProductStone.product_id == product.id).all()
+    apply_live_valuation(product, db)
     return product
 
 
@@ -296,6 +298,13 @@ def mark_sold(
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+
+    product.stones = db.query(ProductStone).filter(ProductStone.product_id == product.id).all()
+    # Lock in today's market gold rate as the permanent sale-time price —
+    # must happen before is_sold flips to True, since apply_live_valuation
+    # skips already-sold products.
+    apply_live_valuation(product, db)
+
     product.is_sold = True
     if body.client_id:
         product.sold_to_client_id = body.client_id

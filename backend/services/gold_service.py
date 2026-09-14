@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from datetime import date
 from models.gold_rate import GoldRate, GoldRateOverride
+from models.product import Product
 
 PURITY_MULTIPLIERS = {
     "24K": 1.0,
@@ -8,6 +9,8 @@ PURITY_MULTIPLIERS = {
     "18K": 0.7600,
     "14K": 0.6500,
 }
+
+GOLD_PURITIES = set(PURITY_MULTIPLIERS.keys())
 
 def get_current_base_rate(db: Session) -> GoldRate:
     return db.query(GoldRate)\
@@ -36,6 +39,29 @@ def get_rate_for_purity(purity: str, db: Session) -> float:
         raise Exception(f"Unknown purity: {purity}")
 
     return round(float(base.price_per_gram_24k) * multiplier, 4)
+
+def apply_live_valuation(product: Product, db: Session) -> Product:
+    """Mark unsold gold products to market: override the displayed gold rate
+    and total price with today's rate instead of the one frozen at creation.
+    Sold products, the vendor purchase cost (cost_price — never touched here),
+    and non-gold products (no live rate to track) are left untouched. This
+    mutates the in-memory object only — callers that want it persisted (e.g.
+    at the moment of sale) must still call db.commit()."""
+    if product.is_sold:
+        return product
+    if not (product.purity and product.purity.upper() in GOLD_PURITIES):
+        return product
+    try:
+        live_rate = get_rate_for_purity(product.purity, db)
+    except Exception:
+        return product  # no gold rate entered yet — keep the stored snapshot
+
+    net_gold_weight = float(product.gold_weight) if product.gold_weight is not None else float(product.weight)
+    stones_total = sum(float(s.total_price or 0) for s in (product.stones or []))
+    product.gold_rate_snapshot = live_rate
+    product.total_price = (live_rate * net_gold_weight) + stones_total + float(product.making_charges or 0)
+    return product
+
 
 def get_all_current_rates(db: Session) -> dict:
     base = get_current_base_rate(db)

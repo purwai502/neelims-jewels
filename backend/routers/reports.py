@@ -4,6 +4,10 @@ from sqlalchemy import text
 from database import get_db
 from routers.users import require_manager_or_above
 from models.user import User
+from models.product import Product
+from models.product_stone import ProductStone
+from models.purity import Purity
+from services.gold_service import apply_live_valuation
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
@@ -144,22 +148,42 @@ def metal_breakdown(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager_or_above),
 ):
-    rows = db.execute(text("""
-        SELECT
-            pu.display_name                          AS metal_type,
-            COUNT(pr.id)                             AS count,
-            COALESCE(SUM(pr.weight), 0)::float       AS total_weight,
-            COALESCE(SUM(pr.total_price), 0)::float  AS total_value,
-            COALESCE(SUM(pr.making_charges), 0)::float AS total_making_charges,
-            CASE WHEN COALESCE(SUM(pr.total_price), 0) = 0 THEN 0
-                 ELSE ROUND((SUM(pr.making_charges) / NULLIF(SUM(pr.total_price), 0) * 100)::numeric, 1)::float
-            END AS avg_making_pct
-        FROM products pr
-        LEFT JOIN purities pu ON pr.purity = pu.code
-        GROUP BY pu.display_name
-        ORDER BY total_value DESC
-    """)).fetchall()
-    return rows_to_dicts(rows)
+    # Loaded via the ORM (not raw SQL) so unsold products can be marked to
+    # market with today's gold rate before being summed — same rule used
+    # everywhere else: sold products keep their frozen sale-time price,
+    # unsold products track the live rate, so this report always matches
+    # what a client's invoice would show for that piece right now.
+    products = db.query(Product).all()
+    stones_by_product: dict = {}
+    for s in db.query(ProductStone).all():
+        stones_by_product.setdefault(str(s.product_id), []).append(s)
+    purity_names = {p.code: p.display_name for p in db.query(Purity).all()}
+
+    breakdown: dict = {}
+    for product in products:
+        product.stones = stones_by_product.get(str(product.id), [])
+        apply_live_valuation(product, db)
+
+        metal_type = purity_names.get(product.purity)
+        acc = breakdown.setdefault(metal_type, {
+            "metal_type": metal_type, "count": 0,
+            "total_weight": 0.0, "total_value": 0.0, "total_making_charges": 0.0,
+        })
+        acc["count"] += 1
+        acc["total_weight"] += float(product.weight or 0)
+        acc["total_value"] += float(product.total_price or 0)
+        acc["total_making_charges"] += float(product.making_charges or 0)
+
+    result = []
+    for acc in breakdown.values():
+        acc["avg_making_pct"] = (
+            round(acc["total_making_charges"] / acc["total_value"] * 100, 1)
+            if acc["total_value"] else 0
+        )
+        result.append(acc)
+
+    result.sort(key=lambda r: r["total_value"], reverse=True)
+    return result
 
 
 @router.get("/gold-exchange-summary")

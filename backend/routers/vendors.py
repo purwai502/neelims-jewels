@@ -3,9 +3,12 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.vendor import Vendor
 from models.account import Account
+from models.product import Product
+from models.product_stone import ProductStone
 from schemas.vendor import VendorCreate, VendorOut
 from routers.users import get_current_user, require_manager_or_above
 from models.user import User
+from services.gold_service import apply_live_valuation
 from typing import List
 
 router = APIRouter(prefix="/vendors", tags=["Vendors"])
@@ -135,21 +138,32 @@ def get_vendor_products(
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
 
-    from sqlalchemy import text
-    rows = db.execute(text("""
-        SELECT
-            p.id, p.barcode, p.name, p.description,
-            p.weight::float, p.purity,
-            p.cost_price::float,
-            p.total_price::float,
-            p.is_sold,
-            p.created_at,
-            p.acquisition_type,
-            p.approval_status,
-            p.approval_due_date
-        FROM products p
-        WHERE p.vendor_id = :vendor_id
-        ORDER BY p.created_at DESC
-    """), {"vendor_id": vendor_id}).fetchall()
+    # Loaded via the ORM so unsold products can be marked to market with
+    # today's gold rate (same rule as everywhere else). cost_price — what
+    # was paid to the vendor — is a historical fact and is never touched by
+    # this, whether the product is sold or not.
+    products = db.query(Product).filter(Product.vendor_id == vendor_id).order_by(Product.created_at.desc()).all()
+    stones_by_product: dict = {}
+    for s in db.query(ProductStone).filter(ProductStone.product_id.in_([p.id for p in products])).all():
+        stones_by_product.setdefault(str(s.product_id), []).append(s)
 
-    return [dict(r._mapping) for r in rows]
+    result = []
+    for product in products:
+        product.stones = stones_by_product.get(str(product.id), [])
+        apply_live_valuation(product, db)
+        result.append({
+            "id":                str(product.id),
+            "barcode":           product.barcode,
+            "name":              product.name,
+            "description":       product.description,
+            "weight":            float(product.weight) if product.weight is not None else None,
+            "purity":            product.purity,
+            "cost_price":        float(product.cost_price) if product.cost_price is not None else None,
+            "total_price":       float(product.total_price) if product.total_price is not None else None,
+            "is_sold":           product.is_sold,
+            "created_at":        product.created_at,
+            "acquisition_type":  product.acquisition_type,
+            "approval_status":   product.approval_status,
+            "approval_due_date": product.approval_due_date,
+        })
+    return result
