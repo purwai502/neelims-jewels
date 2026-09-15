@@ -10,13 +10,14 @@ interface ProductTagProps {
   onClose: () => void;
 }
 
-// Real label: 15mm wide x 100mm long, printed in Portrait (Landscape has
-// been confirmed dead on this printer — it feeds blank labels through).
-// Layout, top to bottom on the printed label: barcode (32.5mm) — logo
-// (32.5mm) — blank tail (35mm, loops through the piece, left unprinted).
+// Real label: 100mm long x 15mm tall, printed horizontally (Landscape).
+// Layout, left to right: barcode (32.5mm) — logo (32.5mm) — blank tail
+// (35mm, loops through the piece, left unprinted). In this orientation the
+// barcode's own reading direction lines up with the zone's width, so it
+// doesn't need to be rotated the way the portrait version did.
 const SCALE    = 7;
-const LABEL_W  = 15   * SCALE;
-const LABEL_H  = 100  * SCALE;
+const LABEL_W  = 100  * SCALE;
+const LABEL_H  = 15   * SCALE;
 const ZONE_LEN = 32.5 * SCALE;
 
 export default function ProductTag({ product, onClose }: ProductTagProps) {
@@ -65,12 +66,12 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
         @media print {
           body > *:not(#tag-print-root) { display: none !important; }
           html, body { margin: 0 !important; padding: 0 !important; }
-          .sticker-label { width: 15mm !important; height: 100mm !important; }
+          .sticker-label { width: 100mm !important; height: 15mm !important; }
           .no-print { display: none !important; }
         }
 
         @page {
-          size: 15mm 100mm;
+          size: 100mm 15mm;
           margin: 0;
         }
       `}</style>
@@ -90,37 +91,27 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
 
         <div className="sticker-label" style={{
           width: LABEL_W, height: LABEL_H,
-          position: "relative",
+          display: "flex", flexDirection: "row", position: "relative",
           background: "#FAFAF8", overflow: "hidden",
         }}>
-          {/* Barcode — first 32.5mm. Its own length runs along this
-              32.5mm zone (not squeezed into the label's 15mm width), so
-              it's drawn sideways and rotated 90°: bar height fits within
-              the 15mm width, barcode length uses the full 32.5mm.
-              Scanners read it fine at any angle. */}
+          {/* Barcode — first 32.5mm */}
           <div style={{
-            position: "absolute", top: 0, left: 0, width: "100%", height: ZONE_LEN,
+            width: ZONE_LEN, height: "100%",
             display: "flex", alignItems: "center", justifyContent: "center",
             overflow: "hidden",
           }}>
-            <div style={{
-              width: ZONE_LEN * 0.9, height: LABEL_W * 0.9,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              transform: "rotate(90deg)",
-            }}>
-              <svg ref={barcodeRef} style={{ maxWidth: "100%", maxHeight: "100%" }} />
-            </div>
+            <svg ref={barcodeRef} style={{ maxWidth: "92%", maxHeight: "88%" }} />
           </div>
 
           {/* Logo — next 32.5mm, centered, upright */}
           <div style={{
-            position: "absolute", top: ZONE_LEN, left: 0, width: "100%", height: ZONE_LEN,
+            width: ZONE_LEN, height: "100%",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
             <img
               src="/neelima-logo.png"
               alt="Neelima Jewels"
-              style={{ width: "78%", height: "auto", objectFit: "contain" }}
+              style={{ height: "78%", width: "auto", objectFit: "contain" }}
             />
           </div>
 
@@ -142,7 +133,7 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
             color:       "rgba(255,255,255,0.25)",
             letterSpacing:"0.06em",
             marginBottom:"20px",
-          }}>15 × 100 mm · barcode 32.5mm + logo 32.5mm + 35mm blank tail · print in Portrait</p>
+          }}>100 × 15 mm · barcode 32.5mm + logo 32.5mm + 35mm blank tail · print in Landscape</p>
 
           <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
             <button onClick={() => window.print()} className="btn-gold">
