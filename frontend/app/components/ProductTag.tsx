@@ -10,30 +10,27 @@ interface ProductTagProps {
   onClose: () => void;
 }
 
-// Real label size: 15mm wide x 100mm long — a narrow vertical strip, not a
-// wide horizontal one (confirmed by a physical test print: the printer only
-// produces correct output in Portrait, and a landscape attempt fed through
-// blank labels entirely). It folds at the 50mm midpoint (dotted perforation)
-// into two 15mm x 50mm halves stacked top-to-bottom — the one nearer the
-// tail (top) is the front (logo), the far one (bottom) is the back
-// (barcode). Preview scale: 7px per mm → 105x700px on screen.
-const SCALE = 7;
-const LABEL_W = 15 * SCALE;
-const LABEL_H = 100 * SCALE;
-const HALF_H  = 50 * SCALE;
+// Real label: a 15mm wide x 100mm long strip, printed in Portrait (confirmed
+// by a physical test print — Landscape fed blank labels through entirely).
+// Of that 100mm length: the first 35mm is the tail (loops through the
+// piece, printed blank), and the remaining 65mm is the actual tag area,
+// split evenly in half by the label's built-in fold perforation — the
+// 32.5mm nearer the tail is the front (logo), the 32.5mm at the far end is
+// the back (barcode). Preview scale: 7px per mm.
+const SCALE    = 7;
+const LABEL_W  = 15   * SCALE;
+const LABEL_H  = 100  * SCALE;
+const TAIL_LEN = 35   * SCALE;
+const HALF_LEN = 32.5 * SCALE; // front and back are each half of the 65mm tag area
 
 export default function ProductTag({ product, onClose }: ProductTagProps) {
   const barcodeRef = useRef<SVGSVGElement>(null);
 
   // Portal this whole modal straight onto document.body, outside the page's
   // own DOM tree entirely. Without this, hiding "everything except the tag"
-  // via visibility/overflow tricks still leaves the rest of this (much
-  // taller) product page in the layout, and at a 15mm page height that
-  // leftover space gets sliced into dozens of blank printed pages — a
-  // browser print-pagination quirk that isn't fixable with CSS alone once
-  // the tag is nested inside the page. Portaling makes it a direct sibling
-  // of the page root, so `body > *:not(#tag-print-root)` below can remove
-  // literally everything else from the print render in one shot.
+  // via visibility tricks still leaves the rest of this (much taller)
+  // product page in the layout, and at this page's tiny height that
+  // leftover space gets sliced into dozens of blank printed pages.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -78,11 +75,6 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
              hidden, so it can't contribute any extra blank pages. */
           body > *:not(#tag-print-root) { display: none !important; }
 
-          /* Hard backstop: clamp html/body themselves to exactly the label's
-             height with no margin and no overflow, so even a stray pixel of
-             leftover spacing (scrollbar reservation, a rounding difference,
-             anything not caught by the rule above) can't spill onto a
-             second page. */
           html, body {
             margin: 0 !important;
             padding: 0 !important;
@@ -126,13 +118,15 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
 
         <div className="sticker-label" style={{
           width: LABEL_W, height: LABEL_H,
-          display: "flex", flexDirection: "column", position: "relative",
+          position: "relative",
           background: "#FAFAF8", overflow: "hidden",
         }}>
-          {/* Front half — top, nearer the tail — logo (kept upright, not
-              rotated, so the brand mark still reads normally) */}
+          {/* Tail — first 35mm, blank, loops through the piece */}
+          <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: TAIL_LEN }} />
+
+          {/* Front — 32.5mm nearer the tail — logo (kept upright) */}
           <div style={{
-            width: "100%", height: HALF_H,
+            position: "absolute", top: TAIL_LEN, left: 0, width: "100%", height: HALF_LEN,
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
             <img
@@ -142,23 +136,24 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
             />
           </div>
 
-          {/* Fold guide — lines up with the label's physical perforation */}
+          {/* Fold guide — between front and back, lines up with the
+              label's physical perforation */}
           <div style={{
-            position: "absolute", top: HALF_H, left: 0, right: 0,
+            position: "absolute", top: TAIL_LEN + HALF_LEN, left: 0, right: 0,
             borderTop: "1px dashed rgba(26,6,34,0.35)",
           }} />
 
-          {/* Back half — bottom, far side of the fold — barcode, rotated
-              90° to run along the label's length instead of its width,
-              since a normal horizontal barcode can't fit legibly in only
-              15mm of width. Scanners read a rotated barcode just fine. */}
+          {/* Back — far 32.5mm — barcode, rotated 90° to run along the
+              label's length instead of its 15mm width, since a normal
+              horizontal barcode can't fit legibly that narrow. Scanners
+              read a rotated barcode just fine. */}
           <div style={{
-            width: "100%", height: HALF_H,
+            position: "absolute", top: TAIL_LEN + HALF_LEN, left: 0, width: "100%", height: HALF_LEN,
             display: "flex", alignItems: "center", justifyContent: "center",
             overflow: "hidden",
           }}>
             <div style={{
-              width: HALF_H * 0.88, height: LABEL_W * 0.92,
+              width: HALF_LEN * 0.88, height: LABEL_W * 0.92,
               display: "flex", alignItems: "center", justifyContent: "center",
               transform: "rotate(90deg)",
             }}>
@@ -175,14 +170,14 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
             fontStyle:   "italic",
             color:       "rgba(201,168,76,0.55)",
             marginBottom:"6px",
-          }}>Peel · Fold at the dotted line · Front (logo) and back (barcode) stick together</p>
+          }}>Peel · Loop the tail through · Fold front (logo) and back (barcode) together</p>
           <p style={{
             fontFamily:  "'Didact Gothic', sans-serif",
             fontSize:    "10px",
             color:       "rgba(255,255,255,0.25)",
             letterSpacing:"0.06em",
             marginBottom:"20px",
-          }}>Label size 15 × 100 mm · print in Portrait</p>
+          }}>15 × 100 mm · 35mm tail + 32.5mm front + 32.5mm back · print in Portrait</p>
 
           <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
             <button onClick={() => window.print()} className="btn-gold">
