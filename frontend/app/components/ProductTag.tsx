@@ -143,22 +143,15 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
             borderTop: "1px dashed rgba(26,6,34,0.35)",
           }} />
 
-          {/* Back — far 32.5mm — barcode, rotated 90° to run along the
-              label's length instead of its 15mm width, since a normal
-              horizontal barcode can't fit legibly that narrow. Scanners
-              read a rotated barcode just fine. */}
+          {/* Back — far 32.5mm — barcode, displayed normally/horizontally
+              like the logo (not rotated). It's visually small given only
+              15mm of width to work with, but that's the intended tradeoff. */}
           <div style={{
             position: "absolute", top: TAIL_LEN + HALF_LEN, left: 0, width: "100%", height: HALF_LEN,
             display: "flex", alignItems: "center", justifyContent: "center",
             overflow: "hidden",
           }}>
-            <div style={{
-              width: HALF_LEN * 0.88, height: LABEL_W * 0.92,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              transform: "rotate(90deg)",
-            }}>
-              <svg ref={barcodeRef} style={{ maxWidth: "100%", maxHeight: "100%" }} />
-            </div>
+            <svg ref={barcodeRef} style={{ maxWidth: "92%", maxHeight: "88%" }} />
           </div>
         </div>
 
