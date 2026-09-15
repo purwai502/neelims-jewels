@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface ProductTagProps {
   product: {
@@ -20,6 +21,18 @@ const HALF_W  = 50 * SCALE;
 
 export default function ProductTag({ product, onClose }: ProductTagProps) {
   const barcodeRef = useRef<SVGSVGElement>(null);
+
+  // Portal this whole modal straight onto document.body, outside the page's
+  // own DOM tree entirely. Without this, hiding "everything except the tag"
+  // via visibility/overflow tricks still leaves the rest of this (much
+  // taller) product page in the layout, and at a 15mm page height that
+  // leftover space gets sliced into dozens of blank printed pages — a
+  // browser print-pagination quirk that isn't fixable with CSS alone once
+  // the tag is nested inside the page. Portaling makes it a direct sibling
+  // of the page root, so `body > *:not(#tag-print-root)` below can remove
+  // literally everything else from the print render in one shot.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (barcodeRef.current) {
@@ -42,34 +55,31 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
     }
   }, [product.barcode]);
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Didact+Gothic&display=swap');
 
         @media print {
-          body * { visibility: hidden !important; }
-          .print-area, .print-area * { visibility: visible !important; }
-          .print-area {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
+          /* This is the only thing allowed to print — everything else on
+             the page (which #tag-print-root is now a sibling of, thanks to
+             the portal) is fully removed from the render tree, not just
+             hidden, so it can't contribute any extra blank pages. */
+          body > *:not(#tag-print-root) { display: none !important; }
+
+          #tag-print-root {
+            position: static !important;
+            inset: auto !important;
+            background: none !important;
+            display: block !important;
           }
           .sticker-label {
             width: 100mm !important;
             height: 15mm !important;
           }
           .no-print { display: none !important; }
-
-          /* visibility:hidden keeps hidden content in the layout flow, so
-             at a page height of only 15mm the rest of this (much taller)
-             page gets sliced into dozens of blank pages. Collapsing body's
-             own height stops it contributing to pagination; .print-area
-             is position:fixed so it isn't clipped by this and still prints. */
-          body {
-            height: 0 !important;
-            overflow: hidden !important;
-          }
         }
 
         @page {
@@ -79,7 +89,7 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
       `}</style>
 
       {/* Overlay */}
-      <div style={{
+      <div id="tag-print-root" style={{
         position:        "fixed",
         inset:           0,
         background:      "rgba(0,0,0,0.85)",
@@ -91,37 +101,35 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
         gap:             "36px",
       }}>
 
-        <div className="print-area">
-          <div className="sticker-label" style={{
-            width: LABEL_W, height: LABEL_H,
-            display: "flex", position: "relative",
-            background: "#FAFAF8", overflow: "hidden",
+        <div className="sticker-label" style={{
+          width: LABEL_W, height: LABEL_H,
+          display: "flex", position: "relative",
+          background: "#FAFAF8", overflow: "hidden",
+        }}>
+          {/* Front half — nearer the tail — logo */}
+          <div style={{
+            width: HALF_W, height: "100%",
+            display: "flex", alignItems: "center", justifyContent: "center",
           }}>
-            {/* Front half — nearer the tail — logo */}
-            <div style={{
-              width: HALF_W, height: "100%",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <img
-                src="/neelima-logo.png"
-                alt="Neelima Jewels"
-                style={{ height: "78%", width: "auto", objectFit: "contain" }}
-              />
-            </div>
+            <img
+              src="/neelima-logo.png"
+              alt="Neelima Jewels"
+              style={{ height: "78%", width: "auto", objectFit: "contain" }}
+            />
+          </div>
 
-            {/* Fold guide — lines up with the label's physical perforation */}
-            <div style={{
-              position: "absolute", left: HALF_W, top: 0, bottom: 0,
-              borderLeft: "1px dashed rgba(26,6,34,0.35)",
-            }} />
+          {/* Fold guide — lines up with the label's physical perforation */}
+          <div style={{
+            position: "absolute", left: HALF_W, top: 0, bottom: 0,
+            borderLeft: "1px dashed rgba(26,6,34,0.35)",
+          }} />
 
-            {/* Back half — far side of the fold — barcode only */}
-            <div style={{
-              width: HALF_W, height: "100%",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <svg ref={barcodeRef} style={{ maxWidth: "92%", maxHeight: "88%" }} />
-            </div>
+          {/* Back half — far side of the fold — barcode only */}
+          <div style={{
+            width: HALF_W, height: "100%",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <svg ref={barcodeRef} style={{ maxWidth: "92%", maxHeight: "88%" }} />
           </div>
         </div>
 
@@ -161,6 +169,7 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
         </div>
 
       </div>
-    </>
+    </>,
+    document.body
   );
 }
