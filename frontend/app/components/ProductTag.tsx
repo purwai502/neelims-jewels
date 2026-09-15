@@ -10,14 +10,17 @@ interface ProductTagProps {
   onClose: () => void;
 }
 
-// Real label size: 100mm x 15mm, folding at the 50mm midpoint (dotted
-// perforation on the physical label) into two 50mm x 15mm halves — the
-// half nearer the tail is the front (logo), the far half is the back
-// (barcode). Preview scale: 7px per mm → 700x105px on screen.
+// Real label size: 15mm wide x 100mm long — a narrow vertical strip, not a
+// wide horizontal one (confirmed by a physical test print: the printer only
+// produces correct output in Portrait, and a landscape attempt fed through
+// blank labels entirely). It folds at the 50mm midpoint (dotted perforation)
+// into two 15mm x 50mm halves stacked top-to-bottom — the one nearer the
+// tail (top) is the front (logo), the far one (bottom) is the back
+// (barcode). Preview scale: 7px per mm → 105x700px on screen.
 const SCALE = 7;
-const LABEL_W = 100 * SCALE;
-const LABEL_H = 15 * SCALE;
-const HALF_W  = 50 * SCALE;
+const LABEL_W = 15 * SCALE;
+const LABEL_H = 100 * SCALE;
+const HALF_H  = 50 * SCALE;
 
 export default function ProductTag({ product, onClose }: ProductTagProps) {
   const barcodeRef = useRef<SVGSVGElement>(null);
@@ -45,8 +48,8 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
         if (!barcodeRef.current) return;
         JsBarcode.default(barcodeRef.current, product.barcode, {
           format:        "CODE128",
-          width:         1.3,
-          height:        34,
+          width:         1.4,
+          height:        40,
           displayValue:  true,
           font:          "Didact Gothic",
           textAlign:     "center",
@@ -83,7 +86,7 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
           html, body {
             margin: 0 !important;
             padding: 0 !important;
-            height: 15mm !important;
+            height: 100mm !important;
             overflow: hidden !important;
           }
 
@@ -92,18 +95,18 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
             inset: auto !important;
             background: none !important;
             display: block !important;
-            height: 15mm !important;
+            height: 100mm !important;
             overflow: hidden !important;
           }
           .sticker-label {
-            width: 100mm !important;
-            height: 15mm !important;
+            width: 15mm !important;
+            height: 100mm !important;
           }
           .no-print { display: none !important; }
         }
 
         @page {
-          size: 100mm 15mm;
+          size: 15mm 100mm;
           margin: 0;
         }
       `}</style>
@@ -123,33 +126,44 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
 
         <div className="sticker-label" style={{
           width: LABEL_W, height: LABEL_H,
-          display: "flex", position: "relative",
+          display: "flex", flexDirection: "column", position: "relative",
           background: "#FAFAF8", overflow: "hidden",
         }}>
-          {/* Front half — nearer the tail — logo */}
+          {/* Front half — top, nearer the tail — logo (kept upright, not
+              rotated, so the brand mark still reads normally) */}
           <div style={{
-            width: HALF_W, height: "100%",
+            width: "100%", height: HALF_H,
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
             <img
               src="/neelima-logo.png"
               alt="Neelima Jewels"
-              style={{ height: "78%", width: "auto", objectFit: "contain" }}
+              style={{ width: "78%", height: "auto", objectFit: "contain" }}
             />
           </div>
 
           {/* Fold guide — lines up with the label's physical perforation */}
           <div style={{
-            position: "absolute", left: HALF_W, top: 0, bottom: 0,
-            borderLeft: "1px dashed rgba(26,6,34,0.35)",
+            position: "absolute", top: HALF_H, left: 0, right: 0,
+            borderTop: "1px dashed rgba(26,6,34,0.35)",
           }} />
 
-          {/* Back half — far side of the fold — barcode only */}
+          {/* Back half — bottom, far side of the fold — barcode, rotated
+              90° to run along the label's length instead of its width,
+              since a normal horizontal barcode can't fit legibly in only
+              15mm of width. Scanners read a rotated barcode just fine. */}
           <div style={{
-            width: HALF_W, height: "100%",
+            width: "100%", height: HALF_H,
             display: "flex", alignItems: "center", justifyContent: "center",
+            overflow: "hidden",
           }}>
-            <svg ref={barcodeRef} style={{ maxWidth: "92%", maxHeight: "88%" }} />
+            <div style={{
+              width: HALF_H * 0.88, height: LABEL_W * 0.92,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transform: "rotate(90deg)",
+            }}>
+              <svg ref={barcodeRef} style={{ maxWidth: "100%", maxHeight: "100%" }} />
+            </div>
           </div>
         </div>
 
@@ -168,7 +182,7 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
             color:       "rgba(255,255,255,0.25)",
             letterSpacing:"0.06em",
             marginBottom:"20px",
-          }}>Label size 100 × 15 mm</p>
+          }}>Label size 15 × 100 mm · print in Portrait</p>
 
           <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
             <button onClick={() => window.print()} className="btn-gold">
