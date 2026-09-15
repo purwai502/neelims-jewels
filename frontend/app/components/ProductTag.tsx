@@ -60,6 +60,16 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
             height: 15mm !important;
           }
           .no-print { display: none !important; }
+
+          /* visibility:hidden keeps hidden content in the layout flow, so
+             at a page height of only 15mm the rest of this (much taller)
+             page gets sliced into dozens of blank pages. Collapsing body's
+             own height stops it contributing to pagination; .print-area
+             is position:fixed so it isn't clipped by this and still prints. */
+          body {
+            height: 0 !important;
+            overflow: hidden !important;
+          }
         }
 
         @page {
