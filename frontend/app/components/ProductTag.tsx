@@ -35,8 +35,14 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
+    // `mounted` is a dependency on purpose: the very first render (before
+    // the portal's real DOM exists) has barcodeRef.current === null, so
+    // this effect fires once and no-ops. Without `mounted` in the deps it
+    // would never run again — product.barcode doesn't change — leaving the
+    // barcode blank forever, on screen and in print alike.
     if (barcodeRef.current) {
       import("jsbarcode").then((JsBarcode) => {
+        if (!barcodeRef.current) return;
         JsBarcode.default(barcodeRef.current, product.barcode, {
           format:        "CODE128",
           width:         1.3,
@@ -53,7 +59,7 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
         });
       });
     }
-  }, [product.barcode]);
+  }, [product.barcode, mounted]);
 
   if (!mounted) return null;
 
@@ -69,11 +75,25 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
              hidden, so it can't contribute any extra blank pages. */
           body > *:not(#tag-print-root) { display: none !important; }
 
+          /* Hard backstop: clamp html/body themselves to exactly the label's
+             height with no margin and no overflow, so even a stray pixel of
+             leftover spacing (scrollbar reservation, a rounding difference,
+             anything not caught by the rule above) can't spill onto a
+             second page. */
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: 15mm !important;
+            overflow: hidden !important;
+          }
+
           #tag-print-root {
             position: static !important;
             inset: auto !important;
             background: none !important;
             display: block !important;
+            height: 15mm !important;
+            overflow: hidden !important;
           }
           .sticker-label {
             width: 100mm !important;
