@@ -46,7 +46,7 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
         JsBarcode.default(barcodeRef.current, product.barcode, {
           format:        "CODE128",
           width:         1.4,
-          height:        40,
+          height:        60,
           displayValue:  true,
           font:          "Didact Gothic",
           textAlign:     "center",
@@ -143,15 +143,24 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
             borderTop: "1px dashed rgba(26,6,34,0.35)",
           }} />
 
-          {/* Back — far 32.5mm — barcode, displayed normally/horizontally
-              like the logo (not rotated). It's visually small given only
-              15mm of width to work with, but that's the intended tradeoff. */}
+          {/* Back — far 32.5mm — barcode. Its reading direction runs along
+              this 32.5mm zone (not squeezed into the label's 15mm width),
+              so it's drawn sideways and rotated 90° to sit correctly: bar
+              height fits within the 15mm width, and the barcode's own
+              length uses the full 32.5mm. Scanners read it fine at any
+              angle. */}
           <div style={{
             position: "absolute", top: TAIL_LEN + HALF_LEN, left: 0, width: "100%", height: HALF_LEN,
             display: "flex", alignItems: "center", justifyContent: "center",
             overflow: "hidden",
           }}>
-            <svg ref={barcodeRef} style={{ maxWidth: "92%", maxHeight: "88%" }} />
+            <div style={{
+              width: HALF_LEN * 0.9, height: LABEL_W * 0.9,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transform: "rotate(90deg)",
+            }}>
+              <svg ref={barcodeRef} style={{ maxWidth: "100%", maxHeight: "100%" }} />
+            </div>
           </div>
         </div>
 
