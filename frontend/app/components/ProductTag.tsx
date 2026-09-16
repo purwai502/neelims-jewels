@@ -114,7 +114,7 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
             display: "flex", alignItems: "center", justifyContent: "center",
             overflow: "hidden",
           }}>
-            <svg ref={barcodeRef} style={{ maxWidth: "92%", maxHeight: "88%" }} />
+            <svg ref={barcodeRef} style={{ maxWidth: "92%", maxHeight: "82%", transform: "translateY(12%)" }} />
           </div>
 
           {/* Logo — next 32.5mm, centered, upright */}
