@@ -5,7 +5,7 @@ from models.product import Product
 
 PURITY_MULTIPLIERS = {
     "24K": 1.0,
-    "22K": 22/24,
+    "22K": 0.92,
     "18K": 0.7600,
     "14K": 0.6500,
 }
