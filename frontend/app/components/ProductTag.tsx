@@ -66,6 +66,15 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
         @media print {
           body > *:not(#tag-print-root) { display: none !important; }
           html, body { margin: 0 !important; padding: 0 !important; }
+          /* The on-screen modal centers the label in the viewport, which
+             looks right on screen but centers it inside the print canvas
+             too — pushing the barcode/logo off the left edge and the
+             blank tail into the middle instead of the end. Pin it to the
+             page's top-left origin for print instead. */
+          #tag-print-root {
+            align-items: flex-start !important;
+            justify-content: flex-start !important;
+          }
           .sticker-label { width: 100mm !important; height: 15mm !important; }
           .no-print { display: none !important; }
         }
