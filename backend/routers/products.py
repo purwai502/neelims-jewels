@@ -50,9 +50,6 @@ def create_product(
     approval_original_due_date = None
 
     if acquisition_type == "ON_APPROVAL":
-        if not product_data.vendor_id:
-            raise HTTPException(status_code=400, detail="Vendor is required for products on approval")
-
         approval_status = "PENDING"
         if product_data.approval_received_date:
             approval_received_date = product_data.approval_received_date

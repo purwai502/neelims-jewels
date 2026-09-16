@@ -196,7 +196,6 @@ export default function NewProductPage() {
     if (metalType === "Gold" && !goldWeight) { setError("Gold weight is required"); return; }
     if (metalType === "Gold" && !goldRate)   { setError("Gold rate is required"); return; }
     if (!finalPrice)    { setError("Final price is required"); return; }
-    if (acquisitionType === "ON_APPROVAL" && !vendorId) { setError("Vendor is required for products on approval"); return; }
     if (acquisitionType === "ON_APPROVAL" && !approvalDueDate) { setError("Approval due date is required"); return; }
 
     setSaving(true);
@@ -357,7 +356,7 @@ export default function NewProductPage() {
           {acquisitionType === "ON_APPROVAL" && (
             <div style={{ padding: "16px", border: "1px solid var(--border-gold)", background: "rgba(201,168,76,0.04)", display: "flex", flexDirection: "column", gap: "14px" }}>
               <p style={{ fontSize: "10px", color: "var(--text-muted)", fontStyle: "italic", fontFamily: "'Cormorant', serif" }}>
-                This item is on loan from the vendor for evaluation. Select a vendor below, and set when it's due back.
+                This item is on loan for evaluation. Select a vendor below if known, and set when it's due back.
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
                 <div>
@@ -496,7 +495,7 @@ export default function NewProductPage() {
 
           {/* Vendor */}
           <div>
-            <FieldLabel>Vendor / Supplier{acquisitionType === "ON_APPROVAL" ? " *" : " (optional)"}</FieldLabel>
+            <FieldLabel>Vendor / Supplier (optional)</FieldLabel>
             <select value={vendorId} onChange={e => setVendorId(e.target.value)}
               style={{ ...inputStyle, cursor: "pointer" }}>
               <option value="">— No vendor —</option>
