@@ -11,14 +11,19 @@ interface ProductTagProps {
 }
 
 // Real label: 100mm long x 15mm tall, printed horizontally (Landscape).
-// Layout, left to right: barcode (32.5mm) — logo (32.5mm) — blank tail
-// (35mm, loops through the piece, left unprinted). In this orientation the
-// barcode's own reading direction lines up with the zone's width, so it
-// doesn't need to be rotated the way the portrait version did.
-const SCALE    = 7;
-const LABEL_W  = 100  * SCALE;
-const LABEL_H  = 15   * SCALE;
-const ZONE_LEN = 32.5 * SCALE;
+// Layout, left to right: barcode (32.5%) — logo (32.5%) — blank tail
+// (35%, loops through the piece, left unprinted). Zone widths are
+// percentages of the parent rather than fixed pixels on purpose: the
+// parent's own width switches from a pixel value on screen to a millimeter
+// value in print (see @media print below), and fixed-pixel children don't
+// rescale when that happens — they stayed a fixed absolute size while the
+// parent became 100mm, throwing off the whole layout only when printed.
+// In this orientation the barcode's own reading direction lines up with
+// the zone's width too, so it doesn't need to be rotated like the portrait
+// version did.
+const SCALE   = 7;
+const LABEL_W = 100 * SCALE;
+const LABEL_H = 15  * SCALE;
 
 export default function ProductTag({ product, onClose }: ProductTagProps) {
   const barcodeRef = useRef<SVGSVGElement>(null);
@@ -105,7 +110,7 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
         }}>
           {/* Barcode — first 32.5mm */}
           <div style={{
-            width: ZONE_LEN, height: "100%",
+            width: "32.5%", height: "100%",
             display: "flex", alignItems: "center", justifyContent: "center",
             overflow: "hidden",
           }}>
@@ -114,7 +119,7 @@ export default function ProductTag({ product, onClose }: ProductTagProps) {
 
           {/* Logo — next 32.5mm, centered, upright */}
           <div style={{
-            width: ZONE_LEN, height: "100%",
+            width: "32.5%", height: "100%",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
             <img
