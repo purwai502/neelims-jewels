@@ -106,7 +106,20 @@ export default function ProductsPage() {
   const [filterPurity,      setFilterPurity]      = useState("");
   const [filterStone,       setFilterStone]       = useState("");
   const [showFilters,       setShowFilters]       = useState(false);
-  const [sortBy,            setSortBy]            = useState<SortOption>("latest");
+  const [sortBy,            setSortByState]       = useState<SortOption>("latest");
+
+  // Persist the chosen sort in localStorage so it survives navigating away
+  // (e.g. opening a product) and back — it should only change when the
+  // user picks a different option, not reset on its own.
+  useEffect(() => {
+    const saved = localStorage.getItem("productsSortBy");
+    if (saved) setSortByState(saved as SortOption);
+  }, []);
+
+  const setSortBy = (value: SortOption) => {
+    setSortByState(value);
+    localStorage.setItem("productsSortBy", value);
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
