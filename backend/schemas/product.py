@@ -73,5 +73,7 @@ class ProductOut(BaseModel):
     approval_original_due_date:   Optional[str] = None
     approval_extension_count:     int = 0
 
+    created_at: Optional[str] = None
+
     class Config:
         from_attributes = True

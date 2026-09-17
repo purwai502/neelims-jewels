@@ -31,6 +31,48 @@ interface Product {
   acquisition_type: string;
   approval_status: string | null;
   approval_due_date: string | null;
+  created_at: string | null;
+}
+
+type SortOption =
+  | "latest" | "oldest"
+  | "price_high" | "price_low"
+  | "name_az" | "name_za"
+  | "weight_high" | "weight_low";
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "latest",      label: "Latest Added" },
+  { value: "oldest",      label: "Oldest Added" },
+  { value: "price_high",  label: "Price: High to Low" },
+  { value: "price_low",   label: "Price: Low to High" },
+  { value: "name_az",     label: "Name: A to Z" },
+  { value: "name_za",     label: "Name: Z to A" },
+  { value: "weight_high", label: "Weight: High to Low" },
+  { value: "weight_low",  label: "Weight: Low to High" },
+];
+
+function sortProducts(list: Product[], sortBy: SortOption): Product[] {
+  const arr = [...list];
+  switch (sortBy) {
+    case "latest":
+      return arr.sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime());
+    case "oldest":
+      return arr.sort((a, b) => new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime());
+    case "price_high":
+      return arr.sort((a, b) => Number(b.total_price || 0) - Number(a.total_price || 0));
+    case "price_low":
+      return arr.sort((a, b) => Number(a.total_price || 0) - Number(b.total_price || 0));
+    case "name_az":
+      return arr.sort((a, b) => a.name.localeCompare(b.name));
+    case "name_za":
+      return arr.sort((a, b) => b.name.localeCompare(a.name));
+    case "weight_high":
+      return arr.sort((a, b) => Number(b.weight || 0) - Number(a.weight || 0));
+    case "weight_low":
+      return arr.sort((a, b) => Number(a.weight || 0) - Number(b.weight || 0));
+    default:
+      return arr;
+  }
 }
 
 function approvalDaysInfo(dueDate: string | null | undefined) {
@@ -64,6 +106,7 @@ export default function ProductsPage() {
   const [filterPurity,      setFilterPurity]      = useState("");
   const [filterStone,       setFilterStone]       = useState("");
   const [showFilters,       setShowFilters]       = useState(false);
+  const [sortBy,            setSortBy]            = useState<SortOption>("latest");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -105,6 +148,8 @@ export default function ProductsPage() {
     );
     return matchSearch && matchStatus && matchCategory && matchSubCategory && matchPurity && matchStone;
   });
+
+  const sorted = sortProducts(filtered, sortBy);
 
   const activeFilters = [filterCategory, filterSubCategory, filterPurity, filterStone].filter(Boolean).length;
 
@@ -167,6 +212,20 @@ export default function ProductsPage() {
           </svg>
           Filters{activeFilters > 0 ? ` (${activeFilters})` : ""}
         </button>
+        <select
+          value={sortBy}
+          onChange={e => setSortBy(e.target.value as SortOption)}
+          style={{
+            padding: "10px 14px", cursor: "pointer",
+            background: "var(--surface)", border: "1px solid var(--border)",
+            color: "var(--text-primary)", fontFamily: "'Didact Gothic', sans-serif",
+            fontSize: "11px", letterSpacing: "0.08em", outline: "none",
+          }}
+        >
+          {SORT_OPTIONS.map(o => (
+            <option key={o.value} value={o.value}>Sort: {o.label}</option>
+          ))}
+        </select>
       </div>
 
       {/* Filter rows — collapsible */}
@@ -236,8 +295,8 @@ export default function ProductsPage() {
           No products found.
         </p>
       ) : (() => {
-        const setIds     = [...new Set(filtered.filter(p => p.set_id).map(p => p.set_id!))];
-        const standalone = filtered.filter(p => !p.set_id);
+        const setIds     = [...new Set(sorted.filter(p => p.set_id).map(p => p.set_id!))];
+        const standalone = sorted.filter(p => !p.set_id);
 
         const ProductCard = ({ product }: { product: Product }) => (
           <Link href={`/products/${product.id}`} style={{ textDecoration: "none" }}>
@@ -294,7 +353,7 @@ export default function ProductsPage() {
 
         const SetCard = ({ sid }: { sid: string }) => {
           const setInfo  = sets.find(s => s.id === sid);
-          const pieces   = filtered.filter(p => p.set_id === sid);
+          const pieces   = sorted.filter(p => p.set_id === sid);
           const allSold  = pieces.every(p => p.is_sold);
           const combined = pieces.reduce((sum, p) => sum + Number(p.total_price || 0), 0);
           const idx      = carouselIdx[sid] ?? 0;
