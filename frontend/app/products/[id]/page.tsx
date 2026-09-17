@@ -75,11 +75,21 @@ export default function ProductDetailPage() {
   const [vendorName,   setVendorName]   = useState<string | null>(null);
   const [setName,      setSetName]      = useState<string | null>(null);
   const [setMembers,   setSetMembers]   = useState<{id: string; name: string}[]>([]);
+  const [browseOrder,  setBrowseOrder]  = useState<string[]>([]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
     setRole(localStorage.getItem("role") || "");
+    // The order the Products page last showed this product in, under
+    // whatever filters/sort were active there — used for the prev/next
+    // arrows below. Absent (or this id not found in it) just hides them.
+    try {
+      const saved = localStorage.getItem("productsBrowseOrder");
+      setBrowseOrder(saved ? JSON.parse(saved) : []);
+    } catch {
+      setBrowseOrder([]);
+    }
     const h = { "Authorization": `Bearer ${token}` };
     Promise.all([
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${id}`, { headers: h }).then(r => r.json()),
@@ -245,17 +255,51 @@ export default function ProductDetailPage() {
   }
   const canManage = role !== "EMPLOYEE";
 
+  const browseIndex = browseOrder.indexOf(id);
+  const prevProductId = browseIndex > 0 ? browseOrder[browseIndex - 1] : null;
+  const nextProductId = browseIndex !== -1 && browseIndex < browseOrder.length - 1 ? browseOrder[browseIndex + 1] : null;
+
   return (
     <div style={{ maxWidth: "900px" }}>
       {showTag && <ProductTag product={product} onClose={() => setShowTag(false)} />}
 
       {/* Header */}
       <div style={{ marginBottom: "32px" }}>
-        <Link href="/products" style={{ textDecoration: "none" }}>
-          <p style={{ fontSize: "11px", letterSpacing: "0.15em", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "12px", cursor: "pointer" }}>
-            ← Back to Products
-          </p>
-        </Link>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+          <Link href="/products" style={{ textDecoration: "none" }}>
+            <p style={{ fontSize: "11px", letterSpacing: "0.15em", color: "var(--text-muted)", textTransform: "uppercase", cursor: "pointer", margin: 0 }}>
+              ← Back to Products
+            </p>
+          </Link>
+          {(prevProductId || nextProductId) && (
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                onClick={() => prevProductId && router.push(`/products/${prevProductId}`)}
+                disabled={!prevProductId}
+                title="Previous product in this list"
+                style={{
+                  width: "30px", height: "30px", display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "transparent", border: "1px solid var(--border)",
+                  color: prevProductId ? "var(--gold)" : "var(--text-muted)",
+                  cursor: prevProductId ? "pointer" : "default",
+                  opacity: prevProductId ? 1 : 0.3, fontSize: "14px",
+                }}
+              >‹</button>
+              <button
+                onClick={() => nextProductId && router.push(`/products/${nextProductId}`)}
+                disabled={!nextProductId}
+                title="Next product in this list"
+                style={{
+                  width: "30px", height: "30px", display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "transparent", border: "1px solid var(--border)",
+                  color: nextProductId ? "var(--gold)" : "var(--text-muted)",
+                  cursor: nextProductId ? "pointer" : "default",
+                  opacity: nextProductId ? 1 : 0.3, fontSize: "14px",
+                }}
+              >›</button>
+            </div>
+          )}
+        </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "6px" }}>

@@ -164,6 +164,18 @@ export default function ProductsPage() {
 
   const sorted = sortProducts(filtered, sortBy);
 
+  // Remember the current filtered + sorted order of product ids so the
+  // product detail page can offer "next/previous in this list" navigation
+  // matching whatever filters/sort are active right now. Depend on the
+  // joined id string (a stable primitive) rather than the `sorted` array
+  // itself, which is a new reference every render.
+  const browseOrderKey = sorted.map(p => p.id).join(",");
+  useEffect(() => {
+    if (!loading) {
+      localStorage.setItem("productsBrowseOrder", JSON.stringify(browseOrderKey ? browseOrderKey.split(",") : []));
+    }
+  }, [loading, browseOrderKey]);
+
   const activeFilters = [filterCategory, filterSubCategory, filterPurity, filterStone].filter(Boolean).length;
 
   const filterPill = (label: string, active: boolean, onClick: () => void) => (
