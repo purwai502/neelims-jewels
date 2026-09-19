@@ -52,7 +52,8 @@ interface BuybackCalc {
   weight:              number;
   purity:              string;
   original_price:      number;
-  deduction_20_pct:    number;
+  buyback_rate:        number;
+  deduction_pct:       number;
   buyback_base:        number;
   original_gold_rate:  number;
   current_gold_rate:   number;
@@ -311,11 +312,11 @@ export default function BuybackPage() {
                     <td style={{ padding: "8px 12px", textAlign: "right" }}>₹{fmt(calc.original_price)}</td>
                   </tr>
                   <tr style={{ borderBottom: "1px solid #eee" }}>
-                    <td style={{ padding: "8px 12px", color: "#333" }}>Less: 20% studio deduction</td>
-                    <td style={{ padding: "8px 12px", textAlign: "right", color: "#c0392b" }}>− ₹{fmt(calc.deduction_20_pct)}</td>
+                    <td style={{ padding: "8px 12px", color: "#333" }}>Less: {Math.round((1 - calc.buyback_rate) * 100)}% studio deduction</td>
+                    <td style={{ padding: "8px 12px", textAlign: "right", color: "#c0392b" }}>− ₹{fmt(calc.deduction_pct)}</td>
                   </tr>
                   <tr style={{ borderBottom: "1px solid #C4A44A", background: "#fafaf7" }}>
-                    <td style={{ padding: "8px 12px", fontWeight: 600 }}>Base buyback value (80% of original)</td>
+                    <td style={{ padding: "8px 12px", fontWeight: 600 }}>Base buyback value ({Math.round(calc.buyback_rate * 100)}% of original)</td>
                     <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 600 }}>₹{fmt(calc.buyback_base)}</td>
                   </tr>
                   <tr style={{ borderBottom: "1px solid #eee" }}>
@@ -472,8 +473,8 @@ export default function BuybackPage() {
                 {/* Breakdown */}
                 {[
                   { label: "Original price paid",  value: `₹${fmt(calc.original_price)}`,       col: "var(--text-primary)" },
-                  { label: "Less 20% deduction",   value: `− ₹${fmt(calc.deduction_20_pct)}`,   col: "#E05C7A" },
-                  { label: "Base buyback (80%)",   value: `₹${fmt(calc.buyback_base)}`,          col: "var(--text-secondary)" },
+                  { label: `Less ${Math.round((1 - calc.buyback_rate) * 100)}% deduction`,   value: `− ₹${fmt(calc.deduction_pct)}`,   col: "#E05C7A" },
+                  { label: `Base buyback (${Math.round(calc.buyback_rate * 100)}%)`,   value: `₹${fmt(calc.buyback_base)}`,          col: "var(--text-secondary)" },
                 ].map(row => (
                   <div key={row.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: "9px" }}>
                     <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: 0 }}>{row.label}</p>

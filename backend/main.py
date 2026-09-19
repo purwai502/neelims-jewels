@@ -73,6 +73,20 @@ def run_migrations():
             conn.execute(text(
                 "ALTER TABLE products ADD COLUMN IF NOT EXISTS approval_extension_count INTEGER NOT NULL DEFAULT 0"
             ))
+            # `purities` was created (via Base.metadata.create_all) but never
+            # seeded — Transaction.gold_purity has a foreign key to
+            # purities.code, so with this table empty, EVERY transaction
+            # that records a gold purity (buybacks included) fails its FK
+            # constraint and gets caught as a generic 400. Seed the four
+            # standard codes; ON CONFLICT DO NOTHING keeps this idempotent.
+            conn.execute(text("""
+                INSERT INTO purities (code, multiplier, display_name) VALUES
+                    ('24K', 1.00, '24K'),
+                    ('22K', 0.92, '22K'),
+                    ('18K', 0.76, '18K'),
+                    ('14K', 0.65, '14K')
+                ON CONFLICT (code) DO NOTHING
+            """))
             conn.commit()
     except Exception as e:
         print(f"[migration] skipped: {e}")
