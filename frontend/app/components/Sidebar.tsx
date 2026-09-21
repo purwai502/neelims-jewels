@@ -34,6 +34,14 @@ export default function Sidebar() {
     setDark(!dark);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("name");
+    localStorage.removeItem("username");
+    router.push("/login");
+  };
+
   const visibleItems = navItems.filter(item => {
     if (item.ownerOnly && role !== "OWNER") return false;
     if (item.staffHidden && role === "STAFF") return false;
@@ -163,6 +171,20 @@ export default function Sidebar() {
           justifyContent: "center", gap: "8px",
         }}>
           {dark ? "☀  Light Mode" : "☾  Dark Mode"}
+        </button>
+        <button onClick={handleLogout} style={{
+          width: "100%", padding: "10px",
+          background: "transparent",
+          border: "1px solid rgba(224,92,122,0.35)",
+          color: "rgba(224,92,122,0.85)",
+          fontFamily: "'Didact Gothic', sans-serif",
+          fontSize: "10px", letterSpacing: "0.2em",
+          textTransform: "uppercase", cursor: "pointer",
+          transition: "all 0.3s ease",
+          display: "flex", alignItems: "center",
+          justifyContent: "center", gap: "8px",
+        }}>
+          ⏻  Log Out
         </button>
       </div>
 
