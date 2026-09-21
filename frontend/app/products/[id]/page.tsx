@@ -512,7 +512,7 @@ export default function ProductDetailPage() {
               <p style={{ fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)" }}>Final Price</p>
             </div>
             <div style={{ padding: "16px 20px" }}>
-              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "22px", color: "var(--gold)", fontWeight: 600 }}>₹{fmt(finalPrice)}</p>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "22px", color: "#1A1A1A", fontWeight: 700 }}>₹{fmt(finalPrice)}</p>
             </div>
           </div>
 
@@ -701,7 +701,7 @@ function CostRow({ label, sublabel, weight, rate, cost, notes, highlight }: {
         <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>{rate}</p>
       </div>
       <div style={{ padding: "11px 14px" }}>
-        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", color: highlight ? "var(--gold)" : "var(--text-primary)" }}>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", color: highlight ? "#1A1A1A" : "var(--text-primary)", fontWeight: highlight ? 700 : 400 }}>
           ₹{fmt(cost)}
         </p>
       </div>
