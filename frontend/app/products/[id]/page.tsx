@@ -238,7 +238,7 @@ export default function ProductDetailPage() {
   const makingCharges = Number(product.making_charges) || 0;
   const finalPrice    = Number(product.total_price) || 0;
 
-  const isPendingApproval = product.acquisition_type === "ON_APPROVAL" && product.approval_status === "PENDING" && !product.is_sold;
+  const isPendingApproval = role !== "EMPLOYEE" && product.acquisition_type === "ON_APPROVAL" && product.approval_status === "PENDING" && !product.is_sold;
   let approvalDaysLeft: number | null = null;
   let approvalOverdue = false;
   let approvalBadgeLabel = "";
@@ -544,8 +544,8 @@ export default function ProductDetailPage() {
         ))}
       </div>
 
-      {/* Approval Details */}
-      {product.acquisition_type === "ON_APPROVAL" && (
+      {/* Approval Details — hidden from employees entirely */}
+      {product.acquisition_type === "ON_APPROVAL" && role !== "EMPLOYEE" && (
         <div style={{ marginTop: "20px", padding: "16px 20px", background: "var(--bg-card)", border: `1px solid ${approvalOverdue ? "rgba(224,92,122,0.4)" : "var(--border-gold)"}` }}>
           <p style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: approvalOverdue ? "#E05C7A" : "var(--gold)", marginBottom: "12px" }}>
             ✦ Approval Details

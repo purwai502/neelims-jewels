@@ -82,6 +82,7 @@ export default function SalePage() {
   const [processing, setProcessing] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [role, setRole] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -89,6 +90,7 @@ export default function SalePage() {
       router.push("/login");
       return;
     }
+    setRole(localStorage.getItem("role") || "");
     const h = { Authorization: `Bearer ${token}` };
 
     Promise.all([
@@ -309,7 +311,7 @@ export default function SalePage() {
               the Detail Breakdown.
             </p>
 
-            {product.acquisition_type === "ON_APPROVAL" && product.approval_status === "PENDING" && (
+            {role !== "EMPLOYEE" && product.acquisition_type === "ON_APPROVAL" && product.approval_status === "PENDING" && (
               <p style={{
                 fontSize: "11px", color: "var(--gold)", fontStyle: "italic",
                 fontFamily: "'Cormorant', serif", marginBottom: "16px",

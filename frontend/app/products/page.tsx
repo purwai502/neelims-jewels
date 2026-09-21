@@ -107,6 +107,8 @@ export default function ProductsPage() {
   const [filterStone,       setFilterStone]       = useState("");
   const [showFilters,       setShowFilters]       = useState(false);
   const [sortBy,            setSortByState]       = useState<SortOption>("latest");
+  const [role,              setRole]              = useState("");
+  const canSeeApproval = role !== "EMPLOYEE";
 
   // Persist the chosen sort in localStorage so it survives navigating away
   // (e.g. opening a product) and back — it should only change when the
@@ -124,6 +126,7 @@ export default function ProductsPage() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
+    setRole(localStorage.getItem("role") || "");
     const h = { "Authorization": `Bearer ${token}` };
     Promise.all([
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/`, { headers: h }).then(r => r.json()),
@@ -148,11 +151,12 @@ export default function ProductsPage() {
       p.name?.toLowerCase().includes(search.toLowerCase()) ||
       (p.barcode ?? "").toLowerCase().includes(search.toLowerCase()) ||
       (p.purity ?? "").toLowerCase().includes(search.toLowerCase());
+    const onApproval = canSeeApproval && p.acquisition_type === "ON_APPROVAL" && p.approval_status === "PENDING";
     const matchStatus =
       statusFilter === "all" ||
       (statusFilter === "sold"         &&  p.is_sold) ||
-      (statusFilter === "available"    && !p.is_sold && !(p.acquisition_type === "ON_APPROVAL" && p.approval_status === "PENDING")) ||
-      (statusFilter === "on_approval"  && p.acquisition_type === "ON_APPROVAL" && p.approval_status === "PENDING");
+      (statusFilter === "available"    && !p.is_sold && !onApproval) ||
+      (statusFilter === "on_approval"  && onApproval);
     const matchCategory    = !filterCategory    || p.category    === filterCategory;
     const matchSubCategory = !filterSubCategory || p.sub_category === filterSubCategory;
     const matchPurity      = !filterPurity      || p.purity       === filterPurity;
@@ -263,7 +267,7 @@ export default function ProductsPage() {
           {CATEGORIES.map(c => filterPill(c, filterCategory === c, () => handleCategoryFilter(c)))}
           <div style={{ flex: 1 }} />
           <span style={{ fontSize: "9px", letterSpacing: "0.15em", color: "var(--text-muted)", textTransform: "uppercase" }}>Status</span>
-          {(["all", "available", "on_approval", "sold"] as const).map(f =>
+          {(["all", "available", ...(canSeeApproval ? ["on_approval" as const] : []), "sold"] as const).map(f =>
             filterPill(f === "on_approval" ? "on approval" : f, statusFilter === f, () => setStatusFilter(f))
           )}
         </div>
@@ -341,7 +345,7 @@ export default function ProductsPage() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                   <p style={{ fontSize: "10px", letterSpacing: "0.2em", color: "var(--gold)", fontFamily: "'Didact Gothic', sans-serif", margin: 0 }}>{product.barcode}</p>
                   {(() => {
-                    const onApproval = !product.is_sold && product.acquisition_type === "ON_APPROVAL" && product.approval_status === "PENDING";
+                    const onApproval = canSeeApproval && !product.is_sold && product.acquisition_type === "ON_APPROVAL" && product.approval_status === "PENDING";
                     const approvalInfo = onApproval ? approvalDaysInfo(product.approval_due_date) : null;
                     if (approvalInfo) {
                       const color = approvalInfo.overdue ? "#E05C7A" : "var(--gold)";
