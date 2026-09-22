@@ -30,6 +30,7 @@ interface Product {
   stones: Stone[];
   acquisition_type: string;
   approval_status: string | null;
+  sold_to_client_id: string | null;
 }
 interface Client {
   id: string;
@@ -104,7 +105,13 @@ export default function SalePage() {
       .then(([p, c]) => {
         setProduct(p);
         setClients(Array.isArray(c) ? c : []);
-        if (p.is_sold) setDone(true);
+        if (p.is_sold) {
+          setDone(true);
+          // Reprinting an already-sold item's certificate — pre-select the
+          // actual buyer instead of leaving it blank (which would print as
+          // "Walk-in Customer" even though a real client is on record).
+          if (p.sold_to_client_id) setClientId(p.sold_to_client_id);
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
