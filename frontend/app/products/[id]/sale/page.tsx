@@ -286,7 +286,7 @@ export default function SalePage() {
             </p>
           </Link>
           <p className="label-caps" style={{ marginBottom: "8px" }}>
-            ✦ &nbsp; Process Sale
+            ✦ &nbsp; {product.is_sold ? "Reprint Certificate" : "Process Sale"}
           </p>
           <h1
             style={{

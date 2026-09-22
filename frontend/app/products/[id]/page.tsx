@@ -634,10 +634,17 @@ export default function ProductDetailPage() {
   </div>
 )}
 {product.is_sold && (
-  <div style={{ marginTop: "24px", padding: "14px 20px", background: "rgba(92,184,122,0.08)", border: "1px solid rgba(92,184,122,0.3)" }}>
-    <p style={{ color: "#5CB87A", fontFamily: "'Cormorant', serif", fontSize: "15px", fontStyle: "italic" }}>
+  <div style={{
+    marginTop: "24px", padding: "14px 20px",
+    background: "rgba(92,184,122,0.08)", border: "1px solid rgba(92,184,122,0.3)",
+    display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px",
+  }}>
+    <p style={{ color: "#5CB87A", fontFamily: "'Cormorant', serif", fontSize: "15px", fontStyle: "italic", margin: 0 }}>
       ✓ This piece has been sold
     </p>
+    <Link href={`/products/${product.id}/sale`}>
+      <button className="btn-outline" style={{ fontSize: "11px" }}>⎙ Reprint Certificate</button>
+    </Link>
   </div>
 )}
 
