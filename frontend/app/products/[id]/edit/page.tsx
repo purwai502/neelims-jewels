@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 
@@ -146,17 +146,39 @@ export default function EditProductPage() {
   const makingPct  = subCategory === "Gold" ? 0.30 : 0.20;
   const autoMaking = category === "Jewellery" && goldValue > 0 ? goldValue * makingPct : null;
 
+  // Both auto-calc effects below must NOT fire the moment the existing
+  // product's data loads — gold_weight/gold_rate are already prefilled
+  // from a live-repriced snapshot at that point, so an unguarded
+  // recalculation here would silently replace the real, originally-fixed
+  // making charges (and final price) with a new figure based on today's
+  // gold rate the instant the edit page opens, before any actual edit.
+  // `loaded` flips true in the very same batch that also sets those
+  // prefilled values, so gating on `loaded` alone isn't enough — skip
+  // exactly one firing after that, then allow genuine recalculation for
+  // any real change the user makes afterward (weight, purity, etc).
+  const skippedInitialAutoMaking = useRef(false);
   useEffect(() => {
+    if (!loaded) return;
+    if (!skippedInitialAutoMaking.current) {
+      skippedInitialAutoMaking.current = true;
+      return;
+    }
     if (autoMaking !== null) {
       setMakingCharges(autoMaking.toFixed(2));
     }
-  }, [autoMaking]);
+  }, [autoMaking, loaded]);
 
+  const skippedInitialAutoFinal = useRef(false);
   useEffect(() => {
+    if (!loaded) return;
+    if (!skippedInitialAutoFinal.current) {
+      skippedInitialAutoFinal.current = true;
+      return;
+    }
     if (!manualFinalPrice) {
       setFinalPrice(autoFinal > 0 ? String(autoFinal.toFixed(2)) : "");
     }
-  }, [autoFinal, manualFinalPrice]);
+  }, [autoFinal, manualFinalPrice, loaded]);
 
   const addStone = () => {
     stoneCounter++;
