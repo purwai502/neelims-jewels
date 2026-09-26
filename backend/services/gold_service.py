@@ -12,6 +12,21 @@ PURITY_MULTIPLIERS = {
 
 GOLD_PURITIES = set(PURITY_MULTIPLIERS.keys())
 
+# Metallurgical fine-gold fraction of an alloy's gross weight (e.g. a 14K
+# piece is 14/24 actual gold by weight) — a completely different concept
+# from PURITY_MULTIPLIERS above, which is a business rate markup applied to
+# the 24K market rate. Used only to estimate gold_weight when a product
+# doesn't have one recorded explicitly. Matches the same table already used
+# frontend-side (PURITY_MULTIPLIER in products/[id]/page.tsx) for this exact
+# estimate — the two must agree, or the displayed Costing and the backend's
+# Final Price silently diverge.
+GOLD_CONTENT_FRACTION = {
+    "24K": 1.0,
+    "22K": 0.9167,
+    "18K": 0.75,
+    "14K": 0.5833,
+}
+
 def get_current_base_rate(db: Session) -> GoldRate:
     return db.query(GoldRate)\
         .filter(GoldRate.effective_date <= date.today())\
@@ -56,7 +71,11 @@ def apply_live_valuation(product: Product, db: Session) -> Product:
     except Exception:
         return product  # no gold rate entered yet — keep the stored snapshot
 
-    net_gold_weight = float(product.gold_weight) if product.gold_weight is not None else float(product.weight)
+    if product.gold_weight is not None:
+        net_gold_weight = float(product.gold_weight)
+    else:
+        fraction = GOLD_CONTENT_FRACTION.get(product.purity.upper(), 1.0)
+        net_gold_weight = float(product.weight) * fraction
     stones_total = sum(float(s.total_price or 0) for s in (product.stones or []))
     product.gold_rate_snapshot = live_rate
     product.total_price = (live_rate * net_gold_weight) + stones_total + float(product.making_charges or 0)
