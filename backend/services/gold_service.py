@@ -55,13 +55,23 @@ def get_rate_for_purity(purity: str, db: Session) -> float:
 
     return round(float(base.price_per_gram_24k) * multiplier, 4)
 
+JEWELLERY_MAKING_PCT_GOLD_SUBCATEGORY = 0.30  # sub_category == "Gold"
+JEWELLERY_MAKING_PCT_DEFAULT = 0.20            # any other Jewellery sub_category
+
+
 def apply_live_valuation(product: Product, db: Session) -> Product:
-    """Mark unsold gold products to market: override the displayed gold rate
-    and total price with today's rate instead of the one frozen at creation.
-    Sold products, the vendor purchase cost (cost_price — never touched here),
-    and non-gold products (no live rate to track) are left untouched. This
-    mutates the in-memory object only — callers that want it persisted (e.g.
-    at the moment of sale) must still call db.commit()."""
+    """Mark unsold gold products to market: override the displayed gold rate,
+    making charges, and total price with today's rate instead of the ones
+    frozen at creation. Making charges are a percentage-of-gold-value pricing
+    policy (30% for the "Gold" sub-category, 20% for other Jewellery), not a
+    fixed labour cost, so they're meant to float with the daily rate for as
+    long as a piece is unsold, exactly like the gold value itself — both
+    numbers should keep climbing (or falling) with the market for as long as
+    the piece sits in stock. Sold products, the vendor purchase cost
+    (cost_price — never touched here), and non-gold products (no live rate to
+    track) are left untouched. This mutates the in-memory object only —
+    callers that want it persisted (e.g. at the moment of sale) must still
+    call db.commit()."""
     if product.is_sold:
         return product
     if not (product.purity and product.purity.upper() in GOLD_PURITIES):
@@ -77,8 +87,16 @@ def apply_live_valuation(product: Product, db: Session) -> Product:
         fraction = GOLD_CONTENT_FRACTION.get(product.purity.upper(), 1.0)
         net_gold_weight = float(product.weight) * fraction
     stones_total = sum(float(s.total_price or 0) for s in (product.stones or []))
+    gold_value = live_rate * net_gold_weight
+
+    making_charges = float(product.making_charges or 0)
+    if product.category == "Jewellery":
+        pct = JEWELLERY_MAKING_PCT_GOLD_SUBCATEGORY if product.sub_category == "Gold" else JEWELLERY_MAKING_PCT_DEFAULT
+        making_charges = round(gold_value * pct, 4)
+        product.making_charges = making_charges
+
     product.gold_rate_snapshot = live_rate
-    product.total_price = (live_rate * net_gold_weight) + stones_total + float(product.making_charges or 0)
+    product.total_price = gold_value + stones_total + making_charges
     return product
 
 
