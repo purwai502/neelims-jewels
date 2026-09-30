@@ -51,6 +51,7 @@ export default function NewProductPage() {
   const [imageFile,        setImageFile]        = useState<File | null>(null);
   const [imagePreview,     setImagePreview]     = useState<string | null>(null);
   const [manualFinalPrice, setManualFinalPrice] = useState(false);
+  const [manualMaking,     setManualMaking]     = useState(false);
 
   // On-approval (vendor consignment/memo)
   const [acquisitionType,      setAcquisitionType]      = useState<"PURCHASED" | "ON_APPROVAL">("PURCHASED");
@@ -130,11 +131,13 @@ export default function NewProductPage() {
   const makingPct  = subCategory === "Gold" ? 0.30 : 0.20;
   const autoMaking = category === "Jewellery" && goldValue > 0 ? goldValue * makingPct : null;
 
+  // keep making charges in sync with live gold value unless user has
+  // overridden it — mirrors manualFinalPrice below
   useEffect(() => {
-    if (autoMaking !== null) {
+    if (!manualMaking && autoMaking !== null) {
       setMakingCharges(autoMaking.toFixed(2));
     }
-  }, [autoMaking]);
+  }, [autoMaking, manualMaking]);
 
   // keep final price in sync unless user has overridden it
   useEffect(() => {
@@ -213,6 +216,7 @@ export default function NewProductPage() {
         category:           category || null,
         sub_category:       subCategory || null,
         making_charges:     parseFloat(makingCharges) || 0,
+        making_charges_manual: manualMaking,
         cost_price:         parseFloat(costPrice) || null,
         vendor_id:          vendorId || null,
         set_id:             setId || null,
@@ -635,15 +639,24 @@ export default function NewProductPage() {
             <p style={{ fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>
               Labour / Making Charges *
             </p>
-            <p style={{ fontSize: "10px", color: "var(--text-muted)", fontStyle: "italic" }}>
-              {autoMaking !== null ? `Auto: ${makingPct * 100}% of gold value · edit to override` : "Enter manually"}
-            </p>
+            {manualMaking ? (
+              <button onClick={() => setManualMaking(false)} style={{
+                background: "none", border: "none", padding: 0, cursor: "pointer",
+                fontSize: "10px", color: "#5CB87A", fontStyle: "italic", textDecoration: "underline",
+                fontFamily: "'Didact Gothic', sans-serif",
+              }}>↩ Reset to auto ({autoMaking !== null ? `₹${autoMaking.toLocaleString("en-IN", { maximumFractionDigits: 0 })}` : "—"})</button>
+            ) : (
+              <p style={{ fontSize: "10px", color: "var(--text-muted)", fontStyle: "italic" }}>
+                {autoMaking !== null ? `Auto: ${makingPct * 100}% of gold value · edit to override` : "Enter manually"}
+              </p>
+            )}
           </div>
           <div style={{ padding: "10px 16px" }}>
             <input type="number" value={makingCharges}
-              onChange={e => setMakingCharges(e.target.value)}
+              onChange={e => { setManualMaking(true); setMakingCharges(e.target.value); }}
               placeholder="e.g. 96788"
-              style={{ ...inputStyle, fontSize: "15px", fontFamily: "'Playfair Display', serif", color: "#5CB87A" }} />
+              style={{ ...inputStyle, fontSize: "15px", fontFamily: "'Playfair Display', serif", color: "#5CB87A",
+                outline: manualMaking ? "1px solid #5CB87A" : "none" }} />
           </div>
         </div>
 

@@ -51,6 +51,7 @@ export default function EditProductPage() {
   const [imageFile,     setImageFile]     = useState<File | null>(null);
   const [imagePreview,  setImagePreview]  = useState<string | null>(null);
   const [manualFinalPrice, setManualFinalPrice] = useState(true); // start true so existing price isn't overwritten on load
+  const [manualMaking,     setManualMaking]     = useState(false); // set from the loaded product's own making_charges_manual flag
 
   const [setId,     setSetId]     = useState<string>("");
   const [newSetName, setNewSetName] = useState("");
@@ -85,6 +86,7 @@ export default function EditProductPage() {
       setGoldWeight(String(product.gold_weight || ""));
       setGoldRate(String(product.gold_rate_snapshot || ""));
       setMakingCharges(String(product.making_charges || ""));
+      setManualMaking(!!product.making_charges_manual);
       setFinalPrice(String(product.total_price || ""));
       setCostPrice(String(product.cost_price || ""));
       setVendorId(product.vendor_id || "");
@@ -146,17 +148,19 @@ export default function EditProductPage() {
   const makingPct  = subCategory === "Gold" ? 0.30 : 0.20;
   const autoMaking = category === "Jewellery" && goldValue > 0 ? goldValue * makingPct : null;
 
-  // Making charges are a % of gold value and are meant to float with the
-  // daily gold rate for as long as a piece is unsold, same as gold value
-  // itself — so recalculating on load (using the current rate the product
-  // was just fetched with) is correct, not a bug. The actual source of
-  // truth for this now lives in apply_live_valuation on the backend; this
-  // effect just keeps the Edit form's own preview in sync with it.
+  // Making charges are a % of gold value and float with the daily gold
+  // rate for as long as a piece is unsold, same as gold value itself — the
+  // actual source of truth for this lives in apply_live_valuation on the
+  // backend, this effect just keeps the Edit form's own preview in sync
+  // with it. `manualMaking` (loaded from the product's own
+  // making_charges_manual flag, and set the moment the user types into
+  // this field directly) is the deliberate-override escape hatch — same
+  // pattern as manualFinalPrice below.
   useEffect(() => {
-    if (autoMaking !== null) {
+    if (!manualMaking && autoMaking !== null) {
       setMakingCharges(autoMaking.toFixed(2));
     }
-  }, [autoMaking]);
+  }, [autoMaking, manualMaking]);
 
   useEffect(() => {
     if (!manualFinalPrice) {
@@ -221,6 +225,7 @@ export default function EditProductPage() {
         category:       category || null,
         sub_category:   subCategory || null,
         making_charges: parseFloat(makingCharges) || 0,
+        making_charges_manual: manualMaking,
         total_price:    parseFloat(finalPrice),
         cost_price:     parseFloat(costPrice) || null,
         vendor_id:      vendorId || null,
@@ -562,13 +567,24 @@ export default function EditProductPage() {
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", borderBottom: "1px solid var(--border)" }}>
           <div style={{ padding: "14px 20px", borderRight: "1px solid var(--border)" }}>
             <p style={{ fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>Labour / Making Charges</p>
-            <p style={{ fontSize: "10px", color: "var(--text-muted)", fontStyle: "italic" }}>
-              {autoMaking !== null ? `Auto: ${makingPct * 100}% of gold value · edit to override` : "Enter manually"}
-            </p>
+            {manualMaking ? (
+              <button onClick={() => setManualMaking(false)} style={{
+                background: "none", border: "none", padding: 0, cursor: "pointer",
+                fontSize: "10px", color: "#5CB87A", fontStyle: "italic", textDecoration: "underline",
+                fontFamily: "'Didact Gothic', sans-serif",
+              }}>↩ Reset to auto ({autoMaking !== null ? `₹${autoMaking.toLocaleString("en-IN", { maximumFractionDigits: 0 })}` : "—"})</button>
+            ) : (
+              <p style={{ fontSize: "10px", color: "var(--text-muted)", fontStyle: "italic" }}>
+                {autoMaking !== null ? `Auto: ${makingPct * 100}% of gold value · edit to override` : "Enter manually"}
+              </p>
+            )}
           </div>
           <div style={{ padding: "10px 16px" }}>
-            <input type="number" value={makingCharges} onChange={e => setMakingCharges(e.target.value)} placeholder="e.g. 96788"
-              style={{ ...inputStyle, fontSize: "15px", fontFamily: "'Playfair Display', serif", color: "#5CB87A" }} />
+            <input type="number" value={makingCharges}
+              onChange={e => { setManualMaking(true); setMakingCharges(e.target.value); }}
+              placeholder="e.g. 96788"
+              style={{ ...inputStyle, fontSize: "15px", fontFamily: "'Playfair Display', serif", color: "#5CB87A",
+                outline: manualMaking ? "1px solid #5CB87A" : "none" }} />
           </div>
         </div>
 

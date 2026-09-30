@@ -12,6 +12,10 @@ class ProductUpdate(BaseModel):
     category:       Optional[str]   = None
     sub_category:   Optional[str]   = None
     making_charges: Optional[float] = 0
+    # True when the user has deliberately typed a custom labour charge —
+    # keeps it fixed instead of being recalculated by the live pricing
+    # formula on every future read.
+    making_charges_manual: Optional[bool] = False
     total_price:    Optional[float] = None
     cost_price:     Optional[float] = None
     vendor_id:      Optional[UUID]  = None
@@ -28,6 +32,7 @@ class ProductCreate(BaseModel):
     category:       Optional[str]   = None
     sub_category:   Optional[str]   = None
     making_charges: Optional[float] = 0
+    making_charges_manual: Optional[bool] = False
     total_price:    Optional[float] = None
     cost_price:     Optional[float] = None
     vendor_id:      Optional[UUID]  = None
@@ -53,6 +58,7 @@ class ProductOut(BaseModel):
     category:           Optional[str]   = None
     sub_category:       Optional[str]   = None
     making_charges:     float
+    making_charges_manual: bool = False
     gold_rate_snapshot: float
     total_price:        Optional[float]
     cost_price:         Optional[float] = None

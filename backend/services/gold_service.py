@@ -90,10 +90,12 @@ def apply_live_valuation(product: Product, db: Session) -> Product:
     gold_value = live_rate * net_gold_weight
 
     making_charges = float(product.making_charges or 0)
-    if product.category == "Jewellery":
+    if product.category == "Jewellery" and not product.making_charges_manual:
         pct = JEWELLERY_MAKING_PCT_GOLD_SUBCATEGORY if product.sub_category == "Gold" else JEWELLERY_MAKING_PCT_DEFAULT
         making_charges = round(gold_value * pct, 4)
         product.making_charges = making_charges
+    # else: making_charges_manual is set — a deliberate override, leave it
+    # exactly as stored regardless of how gold value moves.
 
     product.gold_rate_snapshot = live_rate
     product.total_price = gold_value + stones_total + making_charges

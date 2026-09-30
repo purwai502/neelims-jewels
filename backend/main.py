@@ -87,6 +87,12 @@ def run_migrations():
                     ('14K', 0.65, '14K')
                 ON CONFLICT (code) DO NOTHING
             """))
+            # Lets a product's labour charge be manually overridden and stay
+            # put, instead of being recalculated every time by the live
+            # gold-rate-based pricing formula.
+            conn.execute(text(
+                "ALTER TABLE products ADD COLUMN IF NOT EXISTS making_charges_manual BOOLEAN NOT NULL DEFAULT false"
+            ))
             conn.commit()
     except Exception as e:
         print(f"[migration] skipped: {e}")

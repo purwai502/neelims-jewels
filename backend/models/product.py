@@ -16,6 +16,12 @@ class Product(Base):
     category           = Column(String(50), nullable=True)
     sub_category       = Column(String(50), nullable=True)
     making_charges     = Column(Numeric(12, 4), nullable=False, default=0)
+    # When True, making_charges was deliberately overridden by hand and must
+    # never be recalculated by the live-pricing formula (apply_live_valuation)
+    # — same override concept as manualFinalPrice on the frontend, and
+    # ProductStone.manual_total. When False (default), it's kept in sync with
+    # the % of live gold value every time an unsold product is read.
+    making_charges_manual = Column(Boolean, nullable=False, server_default="false")
     gold_rate_snapshot = Column(Numeric(12, 4), nullable=False, server_default="0")
     total_price        = Column(Numeric(14, 4), nullable=True)
     cost_price         = Column(Numeric(14, 4), nullable=True)

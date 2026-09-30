@@ -78,7 +78,8 @@ def create_product(
         purity             = product_data.purity,
         category           = product_data.category,
         sub_category       = product_data.sub_category,
-        making_charges     = product_data.making_charges,
+        making_charges        = product_data.making_charges,
+        making_charges_manual = bool(product_data.making_charges_manual),
         gold_rate_snapshot = gold_rate_snapshot,
         total_price        = total_price,
         cost_price         = product_data.cost_price,
@@ -181,6 +182,7 @@ def update_product(
     product.category       = product_data.category
     product.sub_category   = product_data.sub_category
     product.making_charges = product_data.making_charges
+    product.making_charges_manual = bool(product_data.making_charges_manual)
     product.total_price    = product_data.total_price
     product.cost_price     = product_data.cost_price
     product.vendor_id      = product_data.vendor_id
