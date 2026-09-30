@@ -776,23 +776,6 @@ export default function SalePage() {
                             fontWeight: 500,
                           })}
                         >
-                          Net Gold Wt.
-                        </td>
-                        <td style={cellBase({ color: "#333", fontSize: "12px", fontWeight: 500 })}>
-                          {netGoldWeight.toFixed(3)} g
-                        </td>
-                        <td colSpan={2} style={cellBase()} />
-                      </tr>
-
-                      <tr>
-                        <td
-                          style={cellBase({
-                            fontFamily: "'Playfair Display', serif",
-                            fontSize: "15px",
-                            color: "#111",
-                            fontWeight: 500,
-                          })}
-                        >
                           {metalType}
                         </td>
                         <td style={cellBase({ color: "#333", fontSize: "12px" })}>
