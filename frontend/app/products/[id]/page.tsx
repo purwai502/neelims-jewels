@@ -71,6 +71,11 @@ export default function ProductDetailPage() {
   const [extending,    setExtending]    = useState(false);
   const [showExtend,   setShowExtend]   = useState(false);
   const [newDueDate,   setNewDueDate]   = useState("");
+  const [showPurchase, setShowPurchase] = useState(false);
+  const [purchaseVendorId,   setPurchaseVendorId]   = useState("");
+  const [purchaseCostPrice,  setPurchaseCostPrice]  = useState("");
+  const [purchasing,         setPurchasing]         = useState(false);
+  const [vendors,            setVendors]            = useState<{id: string; business_name: string}[]>([]);
   const [buybacks,     setBuybacks]     = useState<BuybackRecord[]>([]);
   const [vendorName,   setVendorName]   = useState<string | null>(null);
   const [setName,      setSetName]      = useState<string | null>(null);
@@ -94,9 +99,11 @@ export default function ProductDetailPage() {
     Promise.all([
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${id}`, { headers: h }).then(r => r.json()),
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/buybacks/product/${id}`, { headers: h }).then(r => r.json()),
-    ]).then(([productData, buybackData]) => {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendors/`, { headers: h }).then(r => r.json()).catch(() => []),
+    ]).then(([productData, buybackData, vendorsData]) => {
       setProduct(productData);
       setBuybacks(Array.isArray(buybackData) ? buybackData : []);
+      setVendors(Array.isArray(vendorsData) ? vendorsData : []);
       setLoading(false);
       if (productData?.vendor_id) {
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendors/${productData.vendor_id}`, { headers: h })
@@ -210,6 +217,28 @@ export default function ProductDetailPage() {
       alert("Failed to extend approval due date.");
     }
     setExtending(false);
+  };
+
+  const handlePurchaseFromVendor = async () => {
+    if (!product || !purchaseVendorId || !purchaseCostPrice) return;
+    setPurchasing(true);
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${product.id}/purchase-from-vendor`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ vendor_id: purchaseVendorId, cost_price: parseFloat(purchaseCostPrice) }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setProduct(updated);
+      setVendorName(vendors.find(v => v.id === purchaseVendorId)?.business_name || null);
+      setShowPurchase(false);
+      setPurchaseVendorId("");
+      setPurchaseCostPrice("");
+    } else {
+      alert("Failed to add this item to stock.");
+    }
+    setPurchasing(false);
   };
 
   if (loading) return (
@@ -583,16 +612,20 @@ export default function ProductDetailPage() {
 
           {isPendingApproval && canManage && (
             <div>
-              {!showExtend ? (
-                <div style={{ display: "flex", gap: "10px" }}>
+              {!showExtend && !showPurchase && (
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                   <button onClick={() => { setShowExtend(true); setNewDueDate(product.approval_due_date || ""); }} className="btn-outline" style={{ fontSize: "11px" }}>
                     Extend Approval
+                  </button>
+                  <button onClick={() => { setShowPurchase(true); setPurchaseVendorId(product.vendor_id || ""); }} className="btn-outline" style={{ fontSize: "11px", color: "#5CB87A", borderColor: "rgba(92,184,122,0.4)" }}>
+                    Add to Stock
                   </button>
                   <button onClick={handleReturnToVendor} disabled={returning} className="btn-outline" style={{ fontSize: "11px", color: "#E05C7A", borderColor: "rgba(224,92,122,0.4)" }}>
                     {returning ? "Returning…" : "Return to Vendor"}
                   </button>
                 </div>
-              ) : (
+              )}
+              {showExtend && (
                 <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                   <input type="date" value={newDueDate} onChange={e => setNewDueDate(e.target.value)}
                     style={{ padding: "8px 12px", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-primary)", fontFamily: "'Didact Gothic', sans-serif", fontSize: "12px", outline: "none" }} />
@@ -600,6 +633,21 @@ export default function ProductDetailPage() {
                     {extending ? "Saving…" : "Save New Due Date"}
                   </button>
                   <button onClick={() => setShowExtend(false)} className="btn-outline" style={{ fontSize: "11px" }}>Cancel</button>
+                </div>
+              )}
+              {showPurchase && (
+                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                  <select value={purchaseVendorId} onChange={e => setPurchaseVendorId(e.target.value)}
+                    style={{ padding: "8px 12px", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-primary)", fontFamily: "'Didact Gothic', sans-serif", fontSize: "12px", outline: "none", cursor: "pointer" }}>
+                    <option value="">— Select vendor —</option>
+                    {vendors.map(v => <option key={v.id} value={v.id}>{v.business_name}</option>)}
+                  </select>
+                  <input type="number" placeholder="Cost price paid" value={purchaseCostPrice} onChange={e => setPurchaseCostPrice(e.target.value)}
+                    style={{ padding: "8px 12px", width: "140px", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-primary)", fontFamily: "'Didact Gothic', sans-serif", fontSize: "12px", outline: "none" }} />
+                  <button onClick={handlePurchaseFromVendor} disabled={purchasing || !purchaseVendorId || !purchaseCostPrice} className="btn-gold" style={{ fontSize: "11px" }}>
+                    {purchasing ? "Saving…" : "Confirm Purchase"}
+                  </button>
+                  <button onClick={() => setShowPurchase(false)} className="btn-outline" style={{ fontSize: "11px" }}>Cancel</button>
                 </div>
               )}
             </div>

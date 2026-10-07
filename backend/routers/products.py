@@ -4,6 +4,7 @@ from sqlalchemy import func
 from database import get_db
 from models.product import Product
 from models.product_stone import ProductStone
+from models.vendor import Vendor
 from schemas.product import ProductCreate, ProductUpdate, ProductOut
 from services.gold_service import get_rate_for_purity, apply_live_valuation, GOLD_PURITIES
 from services.barcode_service import generate_barcode
@@ -275,6 +276,45 @@ def extend_approval(
 
     product.approval_due_date = body.new_due_date
     product.approval_extension_count = (product.approval_extension_count or 0) + 1
+    db.commit()
+    db.refresh(product)
+    product.stones = db.query(ProductStone).filter(ProductStone.product_id == product.id).all()
+    apply_live_valuation(product, db)
+    return product
+
+
+class PurchaseFromVendorRequest(BaseModel):
+    vendor_id:  str
+    cost_price: float
+
+
+@router.patch("/{product_id}/purchase-from-vendor", response_model=ProductOut)
+def purchase_from_vendor(
+    product_id: str,
+    body: PurchaseFromVendorRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_or_above)
+):
+    """The rare case: instead of returning an on-approval item, the studio
+    decides to keep it. Records which vendor it was bought from and at what
+    price, and moves it out of pending-approval limbo into regular owned
+    stock — acquisition_type stays ON_APPROVAL as a record of how the piece
+    originally arrived (same convention mark-sold's auto-convert already
+    uses), only approval_status flips to PURCHASED. From that point on it
+    counts toward the vendor's balance like any other purchased product."""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    if product.acquisition_type != "ON_APPROVAL" or product.approval_status != "PENDING":
+        raise HTTPException(status_code=400, detail="Only products pending approval can be purchased into stock")
+
+    vendor = db.query(Vendor).filter(Vendor.id == body.vendor_id).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    product.vendor_id = body.vendor_id
+    product.cost_price = body.cost_price
+    product.approval_status = "PURCHASED"
     db.commit()
     db.refresh(product)
     product.stones = db.query(ProductStone).filter(ProductStone.product_id == product.id).all()
