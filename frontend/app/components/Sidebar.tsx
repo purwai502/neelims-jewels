@@ -17,7 +17,15 @@ const navItems = [
   { label: "Reports",      href: "/reports",      icon: "▦", ownerOnly: false, staffHidden: true  },
 ];
 
-export default function Sidebar() {
+export const SIDEBAR_WIDTH_EXPANDED  = 260;
+export const SIDEBAR_WIDTH_COLLAPSED = 76;
+
+interface SidebarProps {
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
+export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const router   = useRouter();
   const [dark, setDark] = useState(false);
@@ -48,9 +56,22 @@ export default function Sidebar() {
     return true;
   });
 
+  const bottomButtonStyle = (borderColor: string, color: string): React.CSSProperties => ({
+    width: "100%", padding: collapsed ? "12px 0" : "10px",
+    background: "transparent",
+    border: `1px solid ${borderColor}`,
+    color,
+    fontFamily: "'Didact Gothic', sans-serif",
+    fontSize: "10px", letterSpacing: "0.2em",
+    textTransform: "uppercase", cursor: "pointer",
+    transition: "all 0.3s ease",
+    display: "flex", alignItems: "center",
+    justifyContent: "center", gap: "8px",
+  });
+
   return (
     <aside style={{
-      width: "260px",
+      width: collapsed ? `${SIDEBAR_WIDTH_COLLAPSED}px` : `${SIDEBAR_WIDTH_EXPANDED}px`,
       height: "100vh",
       background: "var(--bg-sidebar)",
       display: "flex",
@@ -60,7 +81,41 @@ export default function Sidebar() {
       left: 0,
       zIndex: 100,
       borderRight: "1px solid rgba(201,168,76,0.2)",
+      transition: "width 0.25s ease",
+      overflow: "visible",
     }}>
+
+      {/* Collapse/expand toggle — deliberately oversized and poking out past
+          the sidebar's own edge into the main content, so its presence (and
+          the fact the whole rail collapses) is unmissable rather than a
+          subtle icon someone has to go looking for. */}
+      <button
+        onClick={onToggle}
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        style={{
+          position: "absolute",
+          top: "84px",
+          right: "-16px",
+          width: "32px",
+          height: "32px",
+          borderRadius: "50%",
+          background: "var(--gold)",
+          border: "2px solid var(--bg-sidebar)",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.35), 0 0 0 1px rgba(201,168,76,0.4)",
+          color: "#1A0622",
+          fontSize: "14px",
+          fontWeight: 700,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer",
+          zIndex: 101,
+          transition: "transform 0.2s ease, background 0.2s ease",
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.12)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)"; }}
+      >
+        {collapsed ? "›" : "‹"}
+      </button>
 
       {/* Top ornament line */}
       <div style={{
@@ -69,49 +124,60 @@ export default function Sidebar() {
       }} />
 
       {/* Logo */}
-      <div style={{
-        padding: "36px 28px 28px",
-        position: "relative",
-      }}>
-        <span style={{ position: "absolute", top: "20px", left: "20px", color: "var(--gold)", fontSize: "8px", opacity: 0.5 }}>✦</span>
-        <span style={{ position: "absolute", top: "20px", right: "20px", color: "var(--gold)", fontSize: "8px", opacity: 0.5 }}>✦</span>
-
-        <h1 style={{
-          fontFamily: "'Playfair Display', serif",
-          fontSize: "26px", fontWeight: 700,
-          color: "var(--gold)", letterSpacing: "0.04em",
-          lineHeight: 1.1, fontStyle: "italic",
-        }}>Neelima</h1>
-        <h1 style={{
-          fontFamily: "'Playfair Display', serif",
-          fontSize: "26px", fontWeight: 400,
-          color: "var(--gold-light)", letterSpacing: "0.1em",
-          lineHeight: 1.1, marginBottom: "10px",
-        }}>Jewels</h1>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-          <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, transparent, rgba(201,168,76,0.4))" }} />
-          <span style={{ color: "var(--gold)", fontSize: "8px" }}>✦</span>
-          <div style={{ flex: 1, height: "1px", background: "linear-gradient(to left, transparent, rgba(201,168,76,0.4))" }} />
+      {collapsed ? (
+        <div style={{ padding: "28px 0 20px", textAlign: "center" }}>
+          <p style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: "26px", fontWeight: 700, fontStyle: "italic",
+            color: "var(--gold)", lineHeight: 1, margin: 0,
+          }}>N</p>
+          <span style={{ color: "var(--gold)", fontSize: "8px", opacity: 0.6 }}>✦</span>
         </div>
+      ) : (
+        <div style={{ padding: "36px 28px 28px", position: "relative" }}>
+          <span style={{ position: "absolute", top: "20px", left: "20px", color: "var(--gold)", fontSize: "8px", opacity: 0.5 }}>✦</span>
+          <span style={{ position: "absolute", top: "20px", right: "20px", color: "var(--gold)", fontSize: "8px", opacity: 0.5 }}>✦</span>
 
-        <p style={{
-          fontFamily: "'Didact Gothic', sans-serif",
-          fontSize: "9px", color: "rgba(201,168,76,0.45)",
-          letterSpacing: "0.3em", textTransform: "uppercase",
-          textAlign: "center", marginTop: "6px",
-        }}>Studio Management</p>
-      </div>
+          <h1 style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: "26px", fontWeight: 700,
+            color: "var(--gold)", letterSpacing: "0.04em",
+            lineHeight: 1.1, fontStyle: "italic",
+          }}>Neelima</h1>
+          <h1 style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: "26px", fontWeight: 400,
+            color: "var(--gold-light)", letterSpacing: "0.1em",
+            lineHeight: 1.1, marginBottom: "10px",
+          }}>Jewels</h1>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+            <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, transparent, rgba(201,168,76,0.4))" }} />
+            <span style={{ color: "var(--gold)", fontSize: "8px" }}>✦</span>
+            <div style={{ flex: 1, height: "1px", background: "linear-gradient(to left, transparent, rgba(201,168,76,0.4))" }} />
+          </div>
+
+          <p style={{
+            fontFamily: "'Didact Gothic', sans-serif",
+            fontSize: "9px", color: "rgba(201,168,76,0.45)",
+            letterSpacing: "0.3em", textTransform: "uppercase",
+            textAlign: "center", marginTop: "6px",
+          }}>Studio Management</p>
+        </div>
+      )}
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: "8px 16px", overflowY: "auto" }}>
+      <nav style={{ flex: 1, padding: collapsed ? "8px 10px" : "8px 16px", overflowY: "auto", overflowX: "hidden" }}>
         {visibleItems.map((item) => {
           const active = pathname.startsWith(item.href);
           return (
-            <Link key={item.href} href={item.href} style={{ textDecoration: "none" }}>
+            <Link key={item.href} href={item.href} style={{ textDecoration: "none" }} title={collapsed ? item.label : undefined}>
               <div style={{
-                display: "flex", alignItems: "center", gap: "14px",
-                padding: "11px 16px", marginBottom: "2px",
+                display: "flex", alignItems: "center",
+                gap: collapsed ? 0 : "14px",
+                justifyContent: collapsed ? "center" : "flex-start",
+                padding: collapsed ? "12px 0" : "11px 16px",
+                marginBottom: "2px",
                 background: active ? "rgba(201,168,76,0.1)" : "transparent",
                 borderLeft: active ? "2px solid var(--gold)" : "2px solid transparent",
                 borderRight: active ? "1px solid rgba(201,168,76,0.2)" : "1px solid transparent",
@@ -119,6 +185,7 @@ export default function Sidebar() {
                 fontSize: "12px", fontFamily: "'Didact Gothic', sans-serif",
                 letterSpacing: "0.08em", textTransform: "uppercase",
                 transition: "all 0.25s ease", cursor: "pointer",
+                whiteSpace: "nowrap",
               }}
               onMouseEnter={(e) => {
                 if (!active) {
@@ -133,7 +200,7 @@ export default function Sidebar() {
                 }
               }}>
                 <span style={{ fontSize: "14px", opacity: active ? 1 : 0.7 }}>{item.icon}</span>
-                {item.label}
+                {!collapsed && item.label}
               </div>
             </Link>
           );
@@ -141,50 +208,20 @@ export default function Sidebar() {
       </nav>
 
       {/* Bottom */}
-      <div style={{ padding: "16px", borderTop: "1px solid rgba(201,168,76,0.15)", display: "flex", flexDirection: "column", gap: "8px" }}>
+      <div style={{ padding: collapsed ? "16px 10px" : "16px", borderTop: "1px solid rgba(201,168,76,0.15)", display: "flex", flexDirection: "column", gap: "8px" }}>
         {role === "OWNER" && (
-          <button onClick={() => router.push("/users/new")} style={{
-            width: "100%", padding: "10px",
-            background: "transparent",
-            border: "1px solid rgba(201,168,76,0.35)",
-            color: "rgba(201,168,76,0.85)",
-            fontFamily: "'Didact Gothic', sans-serif",
-            fontSize: "10px", letterSpacing: "0.2em",
-            textTransform: "uppercase", cursor: "pointer",
-            transition: "all 0.3s ease",
-            display: "flex", alignItems: "center",
-            justifyContent: "center", gap: "8px",
-          }}>
-            ◉  Add User
+          <button onClick={() => router.push("/users/new")} title={collapsed ? "Add User" : undefined}
+            style={bottomButtonStyle("rgba(201,168,76,0.35)", "rgba(201,168,76,0.85)")}>
+            ◉{!collapsed && <>&nbsp; Add User</>}
           </button>
         )}
-        <button onClick={toggleTheme} style={{
-          width: "100%", padding: "10px",
-          background: "transparent",
-          border: "1px solid rgba(201,168,76,0.2)",
-          color: "rgba(201,168,76,0.6)",
-          fontFamily: "'Didact Gothic', sans-serif",
-          fontSize: "10px", letterSpacing: "0.2em",
-          textTransform: "uppercase", cursor: "pointer",
-          transition: "all 0.3s ease",
-          display: "flex", alignItems: "center",
-          justifyContent: "center", gap: "8px",
-        }}>
-          {dark ? "☀  Light Mode" : "☾  Dark Mode"}
+        <button onClick={toggleTheme} title={collapsed ? (dark ? "Light Mode" : "Dark Mode") : undefined}
+          style={bottomButtonStyle("rgba(201,168,76,0.2)", "rgba(201,168,76,0.6)")}>
+          {dark ? "☀" : "☾"}{!collapsed && <>&nbsp; {dark ? "Light Mode" : "Dark Mode"}</>}
         </button>
-        <button onClick={handleLogout} style={{
-          width: "100%", padding: "10px",
-          background: "transparent",
-          border: "1px solid rgba(224,92,122,0.35)",
-          color: "rgba(224,92,122,0.85)",
-          fontFamily: "'Didact Gothic', sans-serif",
-          fontSize: "10px", letterSpacing: "0.2em",
-          textTransform: "uppercase", cursor: "pointer",
-          transition: "all 0.3s ease",
-          display: "flex", alignItems: "center",
-          justifyContent: "center", gap: "8px",
-        }}>
-          ⏻  Log Out
+        <button onClick={handleLogout} title={collapsed ? "Log Out" : undefined}
+          style={bottomButtonStyle("rgba(224,92,122,0.35)", "rgba(224,92,122,0.85)")}>
+          ⏻{!collapsed && <>&nbsp; Log Out</>}
         </button>
       </div>
 
