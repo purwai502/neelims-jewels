@@ -438,12 +438,56 @@ export default function ProductsPage() {
           ...standalone.map(p => ({ type: "product" as const, product: p })),
         ];
 
-        return (
+        // A set counts as "sold" only once every piece in it has sold —
+        // otherwise it still belongs with the in-stock inventory.
+        const isSoldItem = (item: GridItem) =>
+          item.type === "set"
+            ? sorted.filter(p => p.set_id === item.sid).every(p => p.is_sold)
+            : item.product.is_sold;
+
+        const inStockItems = gridItems.filter(i => !isSoldItem(i));
+        const soldItems     = gridItems.filter(i =>  isSoldItem(i));
+
+        const renderGrid = (items: GridItem[]) => (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
-            {gridItems.map(item =>
+            {items.map(item =>
               item.type === "set"
                 ? <SetCard key={item.sid} sid={item.sid} />
                 : <ProductCard key={item.product.id} product={item.product} />
+            )}
+          </div>
+        );
+
+        const sectionHeading = (label: string, count: number) => (
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "0 0 16px" }}>
+            <span style={{ color: "var(--gold)", fontSize: "10px" }}>✦</span>
+            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "18px", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>{label}</h2>
+            <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>({count})</span>
+            <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, var(--border-gold), transparent)" }} />
+          </div>
+        );
+
+        // Keep sold stock visually separated from what's actually available,
+        // rather than interleaved in one grid — but if a status filter has
+        // already narrowed the list to just one of the two, there's no need
+        // for a second, empty section header.
+        if (statusFilter !== "all") {
+          return renderGrid(gridItems);
+        }
+
+        return (
+          <div>
+            {inStockItems.length > 0 && (
+              <div style={{ marginBottom: soldItems.length > 0 ? "40px" : 0 }}>
+                {sectionHeading("In Stock", inStockItems.length)}
+                {renderGrid(inStockItems)}
+              </div>
+            )}
+            {soldItems.length > 0 && (
+              <div>
+                {sectionHeading("Sold", soldItems.length)}
+                {renderGrid(soldItems)}
+              </div>
             )}
           </div>
         );
