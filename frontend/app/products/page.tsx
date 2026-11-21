@@ -100,7 +100,8 @@ export default function ProductsPage() {
   const [carouselIdx,       setCarouselIdx]       = useState<Record<string, number>>({});
   const [loading,           setLoading]           = useState(true);
   const [search,            setSearch]            = useState("");
-  const [statusFilter,      setStatusFilter]      = useState<"all" | "available" | "sold" | "on_approval">("all");
+  const [statusFilter,      setStatusFilter]      = useState<"all" | "on_approval">("all");
+  const [view,              setViewState]         = useState<"in_stock" | "sold">("in_stock");
   const [filterCategory,    setFilterCategory]    = useState("");
   const [filterSubCategory, setFilterSubCategory] = useState("");
   const [filterPurity,      setFilterPurity]      = useState("");
@@ -116,11 +117,18 @@ export default function ProductsPage() {
   useEffect(() => {
     const saved = localStorage.getItem("productsSortBy");
     if (saved) setSortByState(saved as SortOption);
+    const savedView = localStorage.getItem("productsView");
+    if (savedView === "in_stock" || savedView === "sold") setViewState(savedView);
   }, []);
 
   const setSortBy = (value: SortOption) => {
     setSortByState(value);
     localStorage.setItem("productsSortBy", value);
+  };
+
+  const setView = (value: "in_stock" | "sold") => {
+    setViewState(value);
+    localStorage.setItem("productsView", value);
   };
 
   useEffect(() => {
@@ -154,8 +162,6 @@ export default function ProductsPage() {
     const onApproval = canSeeApproval && p.acquisition_type === "ON_APPROVAL" && p.approval_status === "PENDING";
     const matchStatus =
       statusFilter === "all" ||
-      (statusFilter === "sold"         &&  p.is_sold) ||
-      (statusFilter === "available"    && !p.is_sold && !onApproval) ||
       (statusFilter === "on_approval"  && onApproval);
     const matchCategory    = !filterCategory    || p.category    === filterCategory;
     const matchSubCategory = !filterSubCategory || p.sub_category === filterSubCategory;
@@ -179,6 +185,25 @@ export default function ProductsPage() {
       localStorage.setItem("productsBrowseOrder", JSON.stringify(browseOrderKey ? browseOrderKey.split(",") : []));
     }
   }, [loading, browseOrderKey]);
+
+  // Group into set-cards + standalone products, then split by sold status —
+  // a set only counts as sold once every piece in it has sold, so it stays
+  // with in-stock until then. Done once here (rather than inside the render
+  // tree) so the item count above the grid can reflect the active view too.
+  type GridItem = { type: "set"; sid: string } | { type: "product"; product: Product };
+  const setIds     = [...new Set(sorted.filter(p => p.set_id).map(p => p.set_id!))];
+  const standalone  = sorted.filter(p => !p.set_id);
+  const gridItems: GridItem[] = [
+    ...setIds.map(sid => ({ type: "set" as const, sid })),
+    ...standalone.map(p => ({ type: "product" as const, product: p })),
+  ];
+  const isSoldItem = (item: GridItem) =>
+    item.type === "set"
+      ? sorted.filter(p => p.set_id === item.sid).every(p => p.is_sold)
+      : item.product.is_sold;
+  const inStockItems = gridItems.filter(i => !isSoldItem(i));
+  const soldItems     = gridItems.filter(i =>  isSoldItem(i));
+  const visibleItems  = view === "sold" ? soldItems : inStockItems;
 
   const activeFilters = [filterCategory, filterSubCategory, filterPurity, filterStone].filter(Boolean).length;
 
@@ -257,6 +282,25 @@ export default function ProductsPage() {
         </select>
       </div>
 
+      {/* In Stock / Sold toggle */}
+      <div style={{ display: "inline-flex", marginBottom: "28px", border: "1px solid var(--border-gold)", background: "var(--bg-card)" }}>
+        {([
+          { key: "in_stock" as const, label: "In Stock", count: inStockItems.length },
+          { key: "sold"     as const, label: "Sold",     count: soldItems.length },
+        ]).map(({ key, label, count }) => (
+          <button key={key} onClick={() => setView(key)} style={{
+            padding: "10px 24px", cursor: "pointer", border: "none",
+            background: view === key ? "var(--gold)" : "transparent",
+            color: view === key ? "#1A0622" : "var(--text-muted)",
+            fontFamily: "'Didact Gothic', sans-serif", fontWeight: view === key ? 700 : 400,
+            fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase" as const,
+            transition: "all 0.2s ease",
+          }}>
+            {label} <span style={{ opacity: 0.75 }}>({count})</span>
+          </button>
+        ))}
+      </div>
+
       {/* Filter rows — collapsible */}
       {showFilters && (
       <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "28px", padding: "16px", background: "var(--bg-card)", border: "1px solid var(--border-gold)" }}>
@@ -266,9 +310,13 @@ export default function ProductsPage() {
           <span style={{ fontSize: "9px", letterSpacing: "0.15em", color: "var(--text-muted)", textTransform: "uppercase", minWidth: "64px" }}>Category</span>
           {CATEGORIES.map(c => filterPill(c, filterCategory === c, () => handleCategoryFilter(c)))}
           <div style={{ flex: 1 }} />
-          <span style={{ fontSize: "9px", letterSpacing: "0.15em", color: "var(--text-muted)", textTransform: "uppercase" }}>Status</span>
-          {(["all", "available", ...(canSeeApproval ? ["on_approval" as const] : []), "sold"] as const).map(f =>
-            filterPill(f === "on_approval" ? "on approval" : f, statusFilter === f, () => setStatusFilter(f))
+          {canSeeApproval && (
+            <>
+              <span style={{ fontSize: "9px", letterSpacing: "0.15em", color: "var(--text-muted)", textTransform: "uppercase" }}>Status</span>
+              {(["all", "on_approval"] as const).map(f =>
+                filterPill(f === "on_approval" ? "on approval" : f, statusFilter === f, () => setStatusFilter(f))
+              )}
+            </>
           )}
         </div>
 
@@ -312,21 +360,18 @@ export default function ProductsPage() {
       <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "28px" }}>
         <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, var(--border-gold), transparent)" }} />
         <span style={{ color: "var(--gold)", fontSize: "10px" }}>✦</span>
-        <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>{filtered.length} item{filtered.length !== 1 ? "s" : ""}</span>
+        <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>{visibleItems.length} item{visibleItems.length !== 1 ? "s" : ""}</span>
       </div>
 
       {loading ? (
         <p style={{ color: "var(--text-muted)", fontFamily: "'Cormorant', serif", fontSize: "18px", fontStyle: "italic" }}>
           Loading inventory...
         </p>
-      ) : filtered.length === 0 ? (
+      ) : visibleItems.length === 0 ? (
         <p style={{ color: "var(--text-muted)", fontFamily: "'Cormorant', serif", fontSize: "18px", fontStyle: "italic" }}>
           No products found.
         </p>
       ) : (() => {
-        const setIds     = [...new Set(sorted.filter(p => p.set_id).map(p => p.set_id!))];
-        const standalone = sorted.filter(p => !p.set_id);
-
         const ProductCard = ({ product }: { product: Product }) => (
           <Link href={`/products/${product.id}`} style={{ textDecoration: "none" }}>
             <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", cursor: "pointer", transition: "all 0.3s ease", position: "relative", overflow: "hidden" }}
@@ -431,63 +476,12 @@ export default function ProductsPage() {
           );
         };
 
-        // Flatten sets and standalone into one grid
-        type GridItem = { type: "set"; sid: string } | { type: "product"; product: Product };
-        const gridItems: GridItem[] = [
-          ...setIds.map(sid => ({ type: "set" as const, sid })),
-          ...standalone.map(p => ({ type: "product" as const, product: p })),
-        ];
-
-        // A set counts as "sold" only once every piece in it has sold —
-        // otherwise it still belongs with the in-stock inventory.
-        const isSoldItem = (item: GridItem) =>
-          item.type === "set"
-            ? sorted.filter(p => p.set_id === item.sid).every(p => p.is_sold)
-            : item.product.is_sold;
-
-        const inStockItems = gridItems.filter(i => !isSoldItem(i));
-        const soldItems     = gridItems.filter(i =>  isSoldItem(i));
-
-        const renderGrid = (items: GridItem[]) => (
+        return (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
-            {items.map(item =>
+            {visibleItems.map(item =>
               item.type === "set"
                 ? <SetCard key={item.sid} sid={item.sid} />
                 : <ProductCard key={item.product.id} product={item.product} />
-            )}
-          </div>
-        );
-
-        const sectionHeading = (label: string, count: number) => (
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "0 0 16px" }}>
-            <span style={{ color: "var(--gold)", fontSize: "10px" }}>✦</span>
-            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "18px", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>{label}</h2>
-            <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>({count})</span>
-            <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, var(--border-gold), transparent)" }} />
-          </div>
-        );
-
-        // Keep sold stock visually separated from what's actually available,
-        // rather than interleaved in one grid — but if a status filter has
-        // already narrowed the list to just one of the two, there's no need
-        // for a second, empty section header.
-        if (statusFilter !== "all") {
-          return renderGrid(gridItems);
-        }
-
-        return (
-          <div>
-            {inStockItems.length > 0 && (
-              <div style={{ marginBottom: soldItems.length > 0 ? "40px" : 0 }}>
-                {sectionHeading("In Stock", inStockItems.length)}
-                {renderGrid(inStockItems)}
-              </div>
-            )}
-            {soldItems.length > 0 && (
-              <div>
-                {sectionHeading("Sold", soldItems.length)}
-                {renderGrid(soldItems)}
-              </div>
             )}
           </div>
         );
