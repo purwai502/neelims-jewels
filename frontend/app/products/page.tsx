@@ -109,6 +109,7 @@ export default function ProductsPage() {
   const [showFilters,       setShowFilters]       = useState(false);
   const [sortBy,            setSortByState]       = useState<SortOption>("latest");
   const [role,              setRole]              = useState("");
+  const [returningOverdue,  setReturningOverdue]  = useState(false);
   const canSeeApproval = role !== "EMPLOYEE";
 
   // Persist the chosen sort in localStorage so it survives navigating away
@@ -131,12 +132,12 @@ export default function ProductsPage() {
     localStorage.setItem("productsView", value);
   };
 
-  useEffect(() => {
+  const loadData = () => {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
     setRole(localStorage.getItem("role") || "");
     const h = { "Authorization": `Bearer ${token}` };
-    Promise.all([
+    return Promise.all([
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/`, { headers: h }).then(r => r.json()),
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/sets/`,     { headers: h }).then(r => r.json()),
     ])
@@ -146,7 +147,37 @@ export default function ProductsPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [router]);
+  };
+
+  useEffect(() => { loadData(); }, [router]);
+
+  const overdueApprovalProducts = canSeeApproval
+    ? products.filter(p =>
+        p.acquisition_type === "ON_APPROVAL" &&
+        p.approval_status === "PENDING" &&
+        approvalDaysInfo(p.approval_due_date)?.overdue
+      )
+    : [];
+
+  const handleReturnAllOverdue = async () => {
+    if (overdueApprovalProducts.length === 0) return;
+    const list = overdueApprovalProducts.map(p => `${p.barcode} — ${p.name}`).join("\n");
+    if (!confirm(`Return ${overdueApprovalProducts.length} overdue product(s) to their vendors? This removes them from the system — this cannot be undone.\n\n${list}`)) return;
+    setReturningOverdue(true);
+    const token = localStorage.getItem("token");
+    const results = await Promise.all(overdueApprovalProducts.map(p =>
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${p.id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` },
+      }).then(r => ({ ok: r.ok, product: p }))
+    ));
+    const failed = results.filter(r => !r.ok);
+    await loadData();
+    setReturningOverdue(false);
+    if (failed.length > 0) {
+      alert(`Returned ${results.length - failed.length} of ${results.length}. Failed:\n${failed.map(f => `${f.product.barcode} — ${f.product.name}`).join("\n")}`);
+    }
+  };
 
   const handleCategoryFilter = (c: string) => {
     const next = filterCategory === c ? "" : c;
@@ -281,6 +312,29 @@ export default function ProductsPage() {
           ))}
         </select>
       </div>
+
+      {/* Overdue on-approval warning */}
+      {overdueApprovalProducts.length > 0 && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: "14px",
+          marginBottom: "20px", padding: "12px 16px",
+          border: "1px solid rgba(224,92,122,0.4)", background: "rgba(224,92,122,0.08)",
+        }}>
+          <span style={{ color: "#E05C7A", fontSize: "14px" }}>⚠</span>
+          <span style={{ flex: 1, fontSize: "12px", color: "var(--text-primary)", fontFamily: "'Didact Gothic', sans-serif" }}>
+            {overdueApprovalProducts.length} product{overdueApprovalProducts.length !== 1 ? "s" : ""} overdue for return to vendor
+          </span>
+          <button onClick={handleReturnAllOverdue} disabled={returningOverdue} style={{
+            padding: "8px 16px", cursor: returningOverdue ? "default" : "pointer",
+            border: "1px solid rgba(224,92,122,0.6)", background: "transparent",
+            color: "#E05C7A", fontFamily: "'Didact Gothic', sans-serif",
+            fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase" as const,
+            opacity: returningOverdue ? 0.6 : 1,
+          }}>
+            {returningOverdue ? "Returning…" : `Return All ${overdueApprovalProducts.length} to Vendor`}
+          </button>
+        </div>
+      )}
 
       {/* In Stock / Sold toggle */}
       <div style={{ display: "inline-flex", marginBottom: "28px", border: "1px solid var(--border-gold)", background: "var(--bg-card)" }}>
