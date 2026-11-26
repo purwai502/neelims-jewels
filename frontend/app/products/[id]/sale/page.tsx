@@ -808,6 +808,11 @@ export default function SalePage() {
                             })}
                           >
                             {stone.stone_name}
+                            {stone.notes && (
+                              <p style={{ fontSize: "10px", color: "#888", fontStyle: "italic", fontFamily: "'Instrument Sans', sans-serif", margin: "3px 0 0", fontWeight: 400 }}>
+                                {stone.notes}
+                              </p>
+                            )}
                           </td>
                           <td style={cellBase({ color: "#333", fontSize: "12px" })}>
                             {stone.weight ? `${Number(stone.weight).toFixed(2)} ct` : "—"}
